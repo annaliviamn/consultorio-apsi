@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#5B7FA6" />
+  <title>Consultório</title>
+
+  <!-- Link pro CSS -->
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Manifest (PWA) -->
+  <link rel="manifest" href="manifest.json" />
+</head>
+<body>
+
+  <!-- Tela de Boas-Vindas-->
+  <div id="tela-boas-vindas">
+    <div class="bemvindo-box">
+      <div class="bemvindo-logo">
+        <img src="assets/logo.jpg" alt="Logo da clínica" />
+      </div>
+      <h1>Bem-vindo(a)</h1>
+      <p>Gerencie seus pacientes e consultas com simplicidade e segurança</p>
+      <div class="bemvindo-botoes">
+        <button id="btn-ir-login" class="btn-primario">Entrar</button>
+        <button id="btn-ir-cadastro" class="btn-secundario">Criar conta</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tela de Login -->
+  <div id="tela-login" class="escondido">
+    <div class="login-box">
+      <div class="login-logo">
+        <img src="assets/logo.jpg" alt="Logo da clínica" />
+      </div>
+      <p>Sistema de prontuários</p>
+      <input type="email" id="input-email-login" placeholder="Seu e-mail" />
+      <input type="password" id="input-senha" placeholder="Digite sua senha" />
+      <button id="btn-entrar">Entrar</button>
+      <span id="erro-login"></span>
+      <span class="link-tela" id="link-ir-cadastro">Não tem conta? Cadastre-se</span>
+    </div>
+  </div>
+
+  <!-- Tela de Cadastro -->
+  <div id="tela-cadastro" class="escondido">
+    <div class="login-box">
+      <div class="login-logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M9 12h6M9 16h6M9 8h3M5 4h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z"/>
+        </svg>
+      </div>
+      <h1>Criar Conta</h1>
+      <p>Preencha seus dados para começar</p>
+      <input type="text" id="input-nome" placeholder="Seu nome completo" />
+      <input type="email" id="input-email" placeholder="Seu e-mail" />
+      <input type="password" id="input-senha-cadastro" placeholder="Crie uma senha" />
+      <input type="password" id="input-senha-confirma" placeholder="Confirme a senha" />
+      <button id="btn-cadastrar" class="btn-primario">Criar conta</button>
+      <span id="erro-cadastro"></span>
+      <span class="link-tela" id="link-voltar-login">Já tem conta? Entrar</span>
+    </div>
+  </div>
+
+  <!-- Modal Novo Paciente -->
+  <div id="modal-paciente" class="escondido">
+    <div class="modal-fundo"></div>
+    <div class="modal-caixa">
+      <div class="modal-topo">
+        <h2>Novo paciente</h2>
+        <button id="btn-fechar-modal" class="btn-fechar">✕</button>
+      </div>
+      <div class="modal-corpo">
+        <div class="modal-secao">Dados pessoais</div>
+        <input type="text" id="pac-nome" placeholder="Nome completo" />
+        <label class="campo-label">Data de nascimento</label>
+        <input type="date" id="pac-nascimento" />
+        <input type="text" id="pac-endereco" placeholder="Endereço completo" />
+        <input type="tel" id="pac-telefone" placeholder="Telefone" />
+        <input type="tel" id="pac-celular" placeholder="Celular" />
+        <input type="text" id="pac-filiacao" placeholder="Filiação (pai e mãe)" />
+        <input type="text" id="pac-estado-civil" placeholder="Estado civil" />
+        <input type="text" id="pac-escolaridade" placeholder="Escolaridade" />
+        <input type="text" id="pac-ocupacao" placeholder="Ocupação" />
+        <input type="email" id="pac-email" placeholder="E-mail" />
+
+        <div class="modal-secao">Dados do atendimento</div>
+        <label class="campo-label">Início do atendimento</label>
+        <input type="date" id="pac-inicio" />
+        <label class="campo-label">Frequência das sessões</label>
+        <select id="pac-frequencia">
+          <option value="">Selecione...</option>
+          <option value="semanal">Semanal</option>
+          <option value="quinzenal">Quinzenal</option>
+          <option value="mensal">Mensal</option>
+        </select>
+        <label class="campo-label">Dia da semana</label>
+        <select id="pac-dia-semana">
+          <option value="">Selecione...</option>
+          <option value="1">Segunda-feira</option>
+          <option value="2">Terça-feira</option>
+          <option value="3">Quarta-feira</option>
+          <option value="4">Quinta-feira</option>
+          <option value="5">Sexta-feira</option>
+          <option value="6">Sábado</option>
+        </select>
+        <label class="campo-label">Horário fixo</label>
+        <input type="time" id="pac-horario-fixo" />
+        <label class="campo-label">Duração da sessão</label>
+        <select id="pac-duracao">
+          <option value="30">30 minutos</option>
+          <option value="50" selected>50 minutos</option>
+          <option value="60">60 minutos</option>
+          <option value="90">90 minutos</option>
+        </select>
+        <input type="text" id="pac-valor-sessao" placeholder="Valor da sessão (R$)" />
+        <label class="campo-label">Forma de pagamento</label>
+        <select id="pac-forma-pagamento">
+          <option value="">Selecione...</option>
+          <option value="Pix">Pix</option>
+          <option value="Dinheiro">Dinheiro</option>
+          <option value="Cartão de crédito">Cartão de crédito</option>
+          <option value="Cartão de débito">Cartão de débito</option>
+          <option value="Transferência bancária">Transferência bancária</option>
+        </select>
+        <input type="text" id="pac-profissional" placeholder="Profissional responsável" />
+
+        <div class="modal-secao">Informações clínicas</div>
+        <textarea id="pac-motivo" placeholder="Motivo da consulta"></textarea>
+        <textarea id="pac-observacoes" placeholder="Observações"></textarea>
+
+        <span id="erro-paciente"></span>
+        <button id="btn-salvar-paciente" class="btn-primario" data-modo="">Salvar paciente</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Nova Consulta -->
+  <div id="modal-consulta" class="escondido">
+    <div class="modal-fundo" id="fundo-consulta"></div>
+    <div class="modal-caixa">
+      <div class="modal-topo">
+        <h2>Nova Consulta</h2>
+        <button id="btn-fechar-modal-consulta" class="btn-fechar">X</button>
+      </div>
+      <div class="modal-corpo">
+        <label class="campo-label">Paciente</label>
+        <select id="consulta-paciente"></select>
+        <label class="campo-label">Data</label>
+        <input type="date" id="consulta-data" />
+        <label class="campo-label">Horário</label>
+        <input type="time" id="consulta-hora" />
+        <label class="campo-label">Duração</label>
+        <select id="consulta-duracao">
+          <option value="30">30 minutos</option>
+          <option value="50" selected>50 minutos</option>
+          <option value="60">60 minutos</option>
+          <option value="90">90 minutos</option>
+        </select>
+        <label class="campo-label">Status</label>
+        <select id="consulta-status">
+          <option value="confirmada">Confirmada</option>
+          <option value="pendente">Pendente</option>
+        </select>
+        <textarea id="consulta-observacoes" placeholder="Observações"></textarea>
+        <span id="erro-consulta"></span>
+        <button id="btn-salvar-consulta" class="btn-primario">Salvar consulta</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Editar Consulta -->
+  <div id="modal-editar-consulta" class="escondido">
+    <div class="modal-fundo" id="fundo-editar-consulta"></div>
+    <div class="modal-caixa">
+      <div class="modal-topo">
+        <h2>Editar consulta</h2>
+        <button id="btn-fechar-editar-consulta" class="btn-fechar">✕</button>
+      </div>
+      <div class="modal-corpo">
+        <label class="campo-label">Paciente</label>
+        <select id="editar-consulta-paciente"></select>
+        <label class="campo-label">Data</label>
+        <input type="date" id="editar-consulta-data" />
+        <label class="campo-label">Horário</label>
+        <input type="time" id="editar-consulta-hora" />
+        <label class="campo-label">Duração</label>
+        <select id="editar-consulta-duracao">
+          <option value="30">30 minutos</option>
+          <option value="50" selected>50 minutos</option>
+          <option value="60">60 minutos</option>
+          <option value="90">90 minutos</option>
+        </select>
+        <label class="campo-label">Status</label>
+        <select id="editar-consulta-status">
+          <option value="confirmada">Confirmada</option>
+          <option value="pendente">Pendente</option>
+          <option value="concluida">Concluída</option>
+          <option value="cancelada">Cancelada</option>
+        </select>
+        <textarea id="editar-consulta-observacoes" placeholder="Observações"></textarea>
+        <div style="display:flex; gap:10px; margin-top:4px">
+          <button id="btn-atualizar-consulta" class="btn-primario">Salvar alterações</button>
+          <button id="btn-excluir-consulta" class="btn-excluir-perfil">Excluir consulta</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Nova Anotação -->
+  <div id="modal-anotacao" class="escondido">
+    <div class="modal-fundo" id="fundo-anotacao"></div>
+    <div class="modal-caixa">
+      <div class="modal-topo">
+        <h2>Registro de sessão</h2>
+        <button id="btn-fechar-anotacao" class="btn-fechar">✕</button>
+      </div>
+      <div class="modal-corpo">
+        <div class="perfil-cronometro" id="perfil-cronometro">
+          <div class="crono-tempo" id="crono-tempo">50:00</div>
+          <div class="crono-acoes">
+            <button class="btn-primario" id="btn-iniciar-sessao">Iniciar sessão</button>
+            <button class="btn-nav" id="btn-pausar-sessao" style="display:none">Pausar</button>
+            <button class="btn-nav" id="btn-resetar-sessao" style="display:none">Resetar</button>
+          </div>
+        </div>
+        <label class="campo-label">Data da sessão</label>
+        <input type="date" id="anotacao-data" />
+        <label class="campo-label">Evolução do paciente</label>
+        <select id="anotacao-evolucao">
+          <option value="positiva">Positiva</option>
+          <option value="estavel">Estável</option>
+          <option value="negativa">Negativa</option>
+        </select>
+        <label class="campo-label">Anotações da sessão</label>
+        <textarea id="anotacao-texto" placeholder="Descreva o que aconteceu na sessão..." style="min-height: 200px"></textarea>
+        <span id="erro-anotacao"></span>
+        <button id="btn-salvar-anotacao" class="btn-primario" data-modo="">Salvar sessão</button>
+      </div>
+    </div>
+  </div>
+
+        <!-- Modal Registrar Pagamento -->
+        <div id="modal-pagamento" class="escondido">
+          <div class="modal-fundo" id="fundo-pagamento"></div>
+          <div class="modal-caixa">
+            <div class="modal-topo">
+              <h2>Registrar pagamento</h2>
+              <button id="btn-fechar-pagamento" class="btn-fechar">✕</button>
+            </div>
+            <div class="modal-corpo">
+              <div class="pagamento-info-paciente" id="pagamento-info-paciente">
+                <div class="pagamento-info-item">
+                  <span class="perfil-label">Paciente</span>
+                  <span id="pagamento-nome-paciente">—</span>
+                </div>
+                <div class="pagamento-info-item">
+                  <span class="perfil-label">Forma de pagamento</span>
+                  <span id="pagamento-forma">—</span>
+                </div>
+              </div>
+              <label class="campo-label">Mês de referência</label>
+              <select id="pagamento-mes">
+                <option value="1">Janeiro</option>
+                <option value="2">Fevereiro</option>
+                <option value="3">Março</option>
+                <option value="4">Abril</option>
+                <option value="5">Maio</option>
+                <option value="6">Junho</option>
+                <option value="7">Julho</option>
+                <option value="8">Agosto</option>
+                <option value="9">Setembro</option>
+                <option value="10">Outubro</option>
+                <option value="11">Novembro</option>
+                <option value="12">Dezembro</option>
+              </select>
+              <label class="campo-label">Ano</label>
+              <input type="number" id="pagamento-ano" value="2026" />
+              <label class="campo-label">Valor (R$)</label>
+              <input type="number" id="pagamento-valor" placeholder="Ex: 300" />
+              <label class="campo-label">Status</label>
+              <select id="pagamento-status">
+                <option value="pendente">Pendente</option>
+                <option value="pago">Pago</option>
+              </select>
+              <label class="campo-label">Data do pagamento</label>
+              <input type="date" id="pagamento-data" />
+              <span id="erro-pagamento"></span>
+              <button id="btn-salvar-pagamento" class="btn-primario">Salvar pagamento</button>
+            </div>
+          </div>
+        </div>
+
+  <!-- App Principal (fica escondido até fazer login) -->
+  <div id="app" class="escondido">
+
+    <!-- CABEÇALHO -->
+    <header id="cabecalho">
+      <div class="header-esquerda">
+        <div class="logo" id="logo-clinica">
+          <img src="assets/logo.jpg" alt="Logo da clínica" />
+        </div>
+        <div>
+          <div class="app-titulo">Atendimento Psicológico</div>
+          <div class="app-subtitulo">Sistema de prontuários</div>
+        </div>
+      </div>
+      <div class="header-direita">
+        <button id="btn-tema">🌙 Modo escuro</button>
+        <div class="avatar">DR</div>
+      </div>
+    </header>
+
+    <!-- Abas de Navegação -->
+    <nav id="abas">
+      <button class="aba ativa" data-tela="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Início
+      </button>
+      <button class="aba" data-tela="prontuarios">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z"/></svg>
+        Prontuários
+      </button>
+      <button class="aba" data-tela="agenda">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        Agenda
+      </button>
+      <button class="aba" data-tela="alertas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+        Alertas
+      </button>
+      <button class="aba" data-tela="config">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Config.
+      </button>
+    </nav>
+
+    <!-- Área de Conteúdo -->
+    <main id="conteudo">
+
+      <!-- Tela: Dashboard -->
+      <section id="tela-dashboard" class="tela ativa">
+        <div class="saudacao">
+          <div class="saudacao-texto">
+            <h2 id="saudacao-texto">Bom dia, Dr.</h2>
+            <p id="saudacao-data"></p>
+          </div>
+          <div class="saudacao-icone">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+          </div>
+        </div>
+        <div class="cards-resumo">
+          <div class="card-stat" id="card-consultas">
+            <div class="stat-icone">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </div>
+            <div class="stat-label">Consultas hoje</div>
+            <div class="stat-valor" id="stat-consultas">0</div>
+            <div class="stat-sub" id="stat-consultas-sub">carregando...</div>
+          </div>
+          <div class="card-stat" id="card-pacientes">
+            <div class="stat-icone">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </div>
+            <div class="stat-label">Pacientes ativos</div>
+            <div class="stat-valor" id="stat-pacientes">0</div>
+            <div class="stat-sub" id="stat-pacientes-sub">no sistema</div>
+          </div>
+          <div class="card-stat" id="card-proxima">
+            <div class="stat-icone">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </div>
+            <div class="stat-label">Próxima consulta</div>
+            <div class="stat-valor" id="stat-proxima">--</div>
+            <div class="stat-sub" id="stat-proxima-sub">sem consultas</div>
+          </div>
+          <div class="card-stat" id="card-pagamentos">
+            <div class="stat-icone">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+              </svg>
+            </div>
+            <div class="stat-label">Pagamentos</div>
+            <div class="stat-valor" id="stat-pagamentos">0</div>
+            <div class="stat-sub" id="stat-pagamentos-sub">pendentes</div>
+          </div>
+        </div>
+        <div class="secao-titulo" id="dashboard-secao-titulo">Consultas de hoje</div>
+        <div id="lista-consultas-hoje">
+          <p class="vazio">Nenhuma consulta agendada para hoje.</p>
+        </div>
+      </section>
+
+      <!-- Tela: Perfil Paciente -->
+      <section id="tela-perfil" class="tela">
+        <div class="barra-topo">
+          <button class="btn-nav" id="btn-voltar-perfil">← Voltar</button>
+          <div class="perfil-acoes">
+            <button class="btn-primario" id="btn-editar-paciente">Editar</button>
+            <button class="btn-primario" id="btn-exportar-prontuario">Exportar</button>
+            <button class="btn-excluir-perfil" id="btn-excluir-perfil">Excluir paciente</button>
+          </div>
+        </div>
+
+        <div class="perfil-header">
+          <div class="perfil-avatar" id="perfil-avatar"></div>
+          <div>
+            <div class="perfil-nome" id="perfil-nome"></div>
+            <div class="perfil-sub" id="perfil-sub"></div>
+          </div>
+        </div>
+
+        <div class="perfil-corpo">
+          <div class="perfil-secao">Dados pessoais</div>
+          <div class="perfil-grade">
+            <div class="perfil-campo"><span class="perfil-label">Data de nascimento</span><span class="perfil-valor" id="pf-nascimento"></span></div>
+            <div class="perfil-campo"><span class="perfil-label">Estado civil</span><span class="perfil-valor" id="pf-estado-civil"></span></div>
+            <div class="perfil-campo"><span class="perfil-label">Escolaridade</span><span class="perfil-valor" id="pf-escolaridade"></span></div>
+            <div class="perfil-campo"><span class="perfil-label">Ocupação</span><span class="perfil-valor" id="pf-ocupacao"></span></div>
+            <div class="perfil-campo"><span class="perfil-label">Telefone</span><span class="perfil-valor" id="pf-telefone"></span></div>
+            <div class="perfil-campo"><span class="perfil-label">Celular</span><span class="perfil-valor" id="pf-celular"></span></div>
+            <div class="perfil-campo"><span class="perfil-label">E-mail</span><span class="perfil-valor" id="pf-email"></span></div>
+            <div class="perfil-campo perfil-campo-largo"><span class="perfil-label">Endereço</span><span class="perfil-valor" id="pf-endereco"></span></div>
+            <div class="perfil-campo perfil-campo-largo"><span class="perfil-label">Filiação</span><span class="perfil-valor" id="pf-filiacao"></span></div>
+          </div>
+
+          <div class="perfil-secao">Dados do atendimento</div>
+          <div class="perfil-grade">
+            <div class="perfil-campo"><span class="perfil-label">Início do atendimento</span><span class="perfil-valor" id="pf-inicio"></span></div>
+            <div class="perfil-campo"><span class="perfil-label">Frequência</span><span class="perfil-valor" id="pf-frequencia"></span></div>
+            <div class="perfil-campo"><span class="perfil-label">Dia da semana</span><span class="perfil-valor" id="pf-dia-semana"></span></div>
+            <div class="perfil-campo"><span class="perfil-label">Horário fixo</span><span class="perfil-valor" id="pf-horario-fixo"></span></div>
+            <div class="perfil-campo"><span class="perfil-label">Valor da sessão</span><span class="perfil-valor" id="pf-valor"></span></div>
+            <div class="perfil-campo"><span class="perfil-label">Forma de pagamento</span><span class="perfil-valor" id="pf-pagamento"></span></div>
+            <div class="perfil-campo"><span class="perfil-label">Profissional responsável</span><span class="perfil-valor" id="pf-profissional"></span></div>
+          </div>
+
+          <div class="perfil-secao">Informações clínicas</div>
+          <div class="perfil-campo perfil-campo-largo">
+            <span class="perfil-label">Motivo da consulta</span>
+            <span class="perfil-valor" id="pf-motivo"></span>
+          </div>
+          <div class="perfil-campo perfil-campo-largo">
+            <span class="perfil-label">Observações</span>
+            <span class="perfil-valor" id="pf-observacoes"></span>
+          </div>
+        </div>
+
+        <!-- Histórico de Sessões -->
+          <div class="perfil-secao" style="margin-top: 16px">Histórico de sessões</div>
+          <div class="barra-topo" style="margin-bottom: 12px">
+            <span></span>
+            <button class="btn-primario" id="btn-nova-anotacao">+ Nova sessão</button>
+          </div>
+          <div id="lista-anotacoes">
+            <p class="vazio">Nenhuma sessão registrada ainda.</p>
+          </div>
+
+        <!-- Controle de Pagamentos -->
+        <div class="perfil-secao" style="margin-top: 16px">Controle de pagamentos</div>
+        <div class="barra-topo" style="margin-bottom: 12px">
+          <span></span>
+          <button class="btn-primario" id="btn-registrar-pagamento">+ Registrar pagamento</button>
+        </div>
+        <div id="lista-pagamentos">
+          <p class="vazio">Nenhum pagamento registrado ainda.</p>
+        </div>
+
+      </section>
+
+      <!-- Tela: Prontuários -->
+      <section id="tela-prontuarios" class="tela">
+        <div class="barra-topo">
+          <div class="secao-titulo" style="margin:0">Pacientes</div>
+          <button class="btn-primario" id="btn-novo-paciente">+ Novo paciente</button>
+        </div>
+        <input type="text" id="busca-paciente" class="campo-busca" placeholder="🔍  Buscar paciente pelo nome..." />
+        <div id="lista-pacientes">
+          <p class="vazio">Nenhum paciente cadastrado ainda.</p>
+        </div>
+      </section>
+
+      <!-- Tela: Agenda -->
+      <section id="tela-agenda" class="tela">
+        <div class="agenda-topo">
+          <div class="calendario-grade" id="calendario-grade">
+            <div class="cal-header">
+              <button class="btn-nav" id="btn-mes-anterior">←</button>
+              <span id="agenda-mes-titulo"></span>
+              <button class="btn-nav" id="btn-proximo-mes">→</button>
+            </div>
+            <div class="cal-dia-semana">Dom</div>
+            <div class="cal-dia-semana">Seg</div>
+            <div class="cal-dia-semana">Ter</div>
+            <div class="cal-dia-semana">Qua</div>
+            <div class="cal-dia-semana">Qui</div>
+            <div class="cal-dia-semana">Sex</div>
+            <div class="cal-dia-semana">Sáb</div>
+          </div>
+          <button class="btn-primario" id="btn-agendar">+ Agendar</button>
+        </div>
+
+        <div class="agenda-dia-titulo" id="agenda-dia-titulo"></div>
+        <div id="grade-agenda">
+          <p class="vazio">Selecione um dia no calendário.</p>
+        </div>
+      </section>
+
+      <!-- Tela: Alertas -->
+      <section id="tela-alertas" class="tela">
+        <div class="secao-titulo">Central de alertas</div>
+        <div id="lista-alertas">
+          <p class="vazio">Nenhum alerta no momento.</p>
+        </div>
+      </section>
+
+      <!-- Tela: Configurações -->
+      <section id="tela-config" class="tela">
+        <div class="secao-titulo">Configurações</div>
+        <div class="lista-config">
+          <div class="item-config">
+            <div>
+              <div class="config-nome">Nome da clínica</div>
+              <div class="config-desc">Aparece no cabeçalho do sistema</div>
+            </div>
+            <input type="text" id="config-nome-clinica" class="config-input" placeholder="Ex: Clínica APSI" />
+          </div>
+          <div class="item-config">
+            <div>
+              <div class="config-nome">Nome do profissional</div>
+              <div class="config-desc">Aparece na saudação</div>
+            </div>
+            <input type="text" id="config-nome-profissional" class="config-input" placeholder="Ex: Dr. Ricardo" />
+          </div>
+          <div class="item-config" style="justify-content: flex-end">
+            <button class="btn-primario" id="btn-salvar-config">Salvar configurações</button>
+          </div>
+          <div class="item-config">
+            <div>
+              <div class="config-nome">Aparência</div>
+              <div class="config-desc">Alternar entre modo claro e escuro</div>
+            </div>
+            <button id="btn-tema-config">Alternar</button>
+          </div>
+          <div class="item-config">
+            <div>
+              <div class="config-nome">Tamanho da fonte</div>
+              <div class="config-desc">Acessibilidade visual</div>
+            </div>
+            <div class="btn-grupo">
+              <button id="btn-fonte-menor">A−</button>
+              <button id="btn-fonte-maior">A+</button>
+            </div>
+          </div>
+          <div class="item-config">
+            <div>
+              <div class="config-nome">Exportar backup</div>
+              <div class="config-desc">Baixar todos os dados</div>
+            </div>
+            <button id="btn-exportar" class="btn-primario">Exportar backup</button>
+          </div>
+          <div class="item-config">
+            <div>
+              <div class="config-nome">Alterar senha</div>
+              <div class="config-desc">Segurança do sistema</div>
+            </div>
+            <button id="btn-alterar-senha" class="btn-primario">Alterar</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="app.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+</body>
+</html>

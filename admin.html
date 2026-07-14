@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — APSI</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .admin-tabela {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+    }
+
+    .admin-tabela th {
+      text-align: left;
+      font-size: 11px;
+      font-family: sans-serif;
+      font-weight: 600;
+      color: var(--texto2);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--borda);
+    }
+
+    .admin-tabela td {
+      font-size: 13px;
+      font-family: sans-serif;
+      color: var(--texto);
+      padding: 12px;
+      border-bottom: 1px solid var(--borda);
+    }
+
+    .admin-tabela tr:hover td {
+      background: var(--bg2);
+    }
+
+    .admin-secao {
+      font-size: 12px;
+      font-family: sans-serif;
+      font-weight: 600;
+      color: var(--acento);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 8px 0 4px 0;
+      border-bottom: 1px solid var(--borda);
+      margin: 20px 0 12px 0;
+    }
+
+    .admin-cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body class="escuro">
+  <header id="cabecalho">
+    <div class="header-esquerda">
+      <div class="logo">
+        <img src="assets/logo.jpg" alt="Logo da clínica" />
+      </div>
+      <div>
+        <div class="app-titulo">Painel Admin</div>
+        <div class="app-subtitulo">APSI — Atendimento Psicológico</div>
+      </div>
+    </div>
+    <div class="header-direita">
+      <button id="btn-sair" class="btn-primario">Sair</button>
+    </div>
+  </header>
+
+  <nav id="abas">
+    <button class="aba ativa" data-tela="visao-geral">Visão Geral</button>
+    <button class="aba" data-tela="usuarios">Usuários</button>
+    <button class="aba" data-tela="pacientes">Pacientes</button>
+    <button class="aba" data-tela="consultas">Consultas</button>
+    <button class="aba" data-tela="pagamentos">Pagamentos</button>
+  </nav>
+
+  <main id="conteudo">
+    <!-- Visão Geral -->
+    <section id="tela-visao-geral" class="tela ativa">
+      <div class="saudacao">
+        <div class="saudacao-texto">
+          <h2>Painel de Administração</h2>
+          <p id="admin-data"></p>
+        </div>
+      </div>
+      <div class="admin-cards">
+        <div class="card-stat">
+          <div class="stat-label">Usuários</div>
+          <div class="stat-valor" id="stat-admin-usuarios">0</div>
+          <div class="stat-sub">cadastrados</div>
+        </div>
+        <div class="card-stat">
+          <div class="stat-label">Pacientes</div>
+          <div class="stat-valor" id="stat-admin-pacientes">0</div>
+          <div class="stat-sub">no sistema</div>
+        </div>
+        <div class="card-stat">
+          <div class="stat-label">Consultas</div>
+          <div class="stat-valor" id="stat-admin-consultas">0</div>
+          <div class="stat-sub">registradas</div>
+        </div>
+        <div class="card-stat">
+          <div class="stat-label">Pagamentos</div>
+          <div class="stat-valor" id="stat-admin-pagamentos">0</div>
+          <div class="stat-sub">registrados</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Usuários -->
+    <section id="tela-usuarios" class="tela">
+      <div class="secao-titulo">Usuários cadastrados</div>
+      <div id="lista-admin-usuarios"></div>
+    </section>
+
+    <!-- Pacientes -->
+    <section id="tela-pacientes" class="tela">
+      <div class="secao-titulo">Todos os pacientes</div>
+      <div id="lista-admin-pacientes"></div>
+    </section>
+
+    <!-- Consultas -->
+    <section id="tela-consultas" class="tela">
+      <div class="secao-titulo">Todas as consultas</div>
+      <div id="lista-admin-consultas"></div>
+    </section>
+
+    <!-- Pagamentos -->
+    <section id="tela-pagamentos" class="tela">
+      <div class="secao-titulo">Todos os pagamentos</div>
+      <div id="lista-admin-pagamentos"></div>
+    </section>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
