@@ -744,8 +744,13 @@ document.getElementById('btn-voltar-perfil').addEventListener('click', () => {
 
 // Excluir pelo perfil
 document.getElementById('btn-excluir-perfil').addEventListener('click', async () => {
-  const confirmar = confirm(`Tem certeza que deseja excluir ${pacienteAtual.nome}?`);
+  const confirmar = confirm(`Tem certeza que deseja excluir ${pacienteAtual.nome}? Todos os dados relacionados serão apagados.`);
   if (confirmar) {
+    const cols = ['consultas', 'anotacoes', 'pagamentos'];
+    for (const col of cols) {
+      const snap = await db.collection(col).where('pacienteId', '==', pacienteAtual.id).get();
+      for (const doc of snap.docs) await doc.ref.delete();
+    }
     await db.collection('pacientes').doc(pacienteAtual.id).delete();
     navegarPara('prontuarios');
   }

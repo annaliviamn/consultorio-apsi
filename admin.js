@@ -282,5 +282,31 @@ async function carregarPagamentosAdmin() {
   });
 }
 
+/* Limpeza de dados órfãos */
+async function limparDadosOrfaos() {
+  const confirmar = confirm('Isso vai remover consultas, anotações e pagamentos de pacientes que não existem mais. Continuar?');
+  if (!confirmar) return;
+
+  const snapshotPacientes = await db.collection('pacientes').get();
+  const idsPacientes = new Set(snapshotPacientes.docs.map(doc => doc.id));
+
+  const cols = ['consultas', 'anotacoes', 'pagamentos'];
+  let totalRemovidos = 0;
+
+  for (const col of cols) {
+    const snapshot = await db.collection(col).get();
+    for (const doc of snapshot.docs) {
+      const pacienteId = doc.data().pacienteId;
+      if (pacienteId && !idsPacientes.has(pacienteId)) {
+        await doc.ref.delete();
+        totalRemovidos++;
+      }
+    }
+  }
+
+  alert(`Limpeza concluída! ${totalRemovidos} registro(s) órfão(s) removido(s).`);
+  carregarVisaoGeral();
+}
+
 /* Inicialização */
 carregarVisaoGeral();
