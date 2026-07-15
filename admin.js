@@ -125,6 +125,9 @@ async function carregarPacientesAdmin() {
       <thead>
         <tr>
           <th>Nome</th>
+          <th>CPF</th>
+          <th>Data de nascimento</th>
+          <th>Telefone</th>
           <th>Frequência</th>
           <th>Horário</th>
           <th>Profissional</th>
@@ -136,6 +139,9 @@ async function carregarPacientesAdmin() {
         ${pacientes.map(p => `
           <tr>
             <td>${p.nome || '—'}</td>
+            <td>${p.cpf || '—'}</td>
+            <td>${p.dataNascimento ? new Date(p.dataNascimento + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}</td>
+            <td>${p.telefone || '—'}</td>
             <td>${p.frequencia || '—'}</td>
             <td>${p.horarioFixo || '—'}</td>
             <td>${p.profissional || '—'}</td>

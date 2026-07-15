@@ -81,14 +81,61 @@
         <input type="text" id="pac-nome" placeholder="Nome completo" />
         <label class="campo-label">Data de nascimento</label>
         <input type="date" id="pac-nascimento" />
+        <input type="text" id="pac-cpf" placeholder="CPF" />
         <input type="text" id="pac-endereco" placeholder="Endereço completo" />
         <input type="tel" id="pac-telefone" placeholder="Telefone" />
         <input type="tel" id="pac-celular" placeholder="Celular" />
-        <input type="text" id="pac-filiacao" placeholder="Filiação (pai e mãe)" />
-        <input type="text" id="pac-estado-civil" placeholder="Estado civil" />
-        <input type="text" id="pac-escolaridade" placeholder="Escolaridade" />
-        <input type="text" id="pac-ocupacao" placeholder="Ocupação" />
         <input type="email" id="pac-email" placeholder="E-mail" />
+        <label class="campo-label">Estado civil</label>
+        <select id="pac-estado-civil">
+          <option value="">Selecione...</option>
+          <option value="Solteiro(a)">Solteiro(a)</option>
+          <option value="Casado(a)">Casado(a)</option>
+          <option value="União estável">União estável</option>
+          <option value="Divorciado(a)">Divorciado(a)</option>
+          <option value="Separado(a)">Separado(a)</option>
+          <option value="Viúvo(a)">Viúvo(a)</option>
+          <option value="Não informado">Não informado</option>
+        </select>
+        <label class="campo-label">Escolaridade</label>
+        <select id="pac-escolaridade">
+          <option value="">Selecione...</option>
+          <option value="Educação Infantil">Educação Infantil</option>
+          <option value="Ensino Fundamental I">Ensino Fundamental I (1º ao 5º ano)</option>
+          <option value="Ensino Fundamental II">Ensino Fundamental II (6º ao 9º ano)</option>
+          <option value="Ensino Médio">Ensino Médio</option>
+          <option value="Ensino Técnico">Ensino Técnico</option>
+          <option value="Ensino Superior cursando">Ensino Superior (cursando)</option>
+          <option value="Ensino Superior completo">Ensino Superior (completo)</option>
+          <option value="Pós-graduação">Pós-graduação</option>
+          <option value="Mestrado">Mestrado</option>
+          <option value="Doutorado">Doutorado</option>
+          <option value="Não alfabetizado">Não alfabetizado</option>
+          <option value="Não informado">Não informado</option>
+        </select>
+        <input type="text" id="pac-ocupacao" placeholder="Ocupação" />
+        <label class="campo-label">Nome do pai</label>
+        <input type="text" id="pac-nome-pai" placeholder="Nome do pai" />
+        <label class="campo-label">Nome da mãe</label>
+        <input type="text" id="pac-nome-mae" placeholder="Nome da mãe" />
+
+        <div class="modal-secao">Responsável legal</div>
+        <input type="text" id="pac-responsavel-nome" placeholder="Nome do responsável legal" />
+        <label class="campo-label">Parentesco</label>
+        <select id="pac-responsavel-parentesco">
+          <option value="">Selecione...</option>
+          <option value="Pai">Pai</option>
+          <option value="Mãe">Mãe</option>
+          <option value="Avô">Avô</option>
+          <option value="Avó">Avó</option>
+          <option value="Tio(a)">Tio(a)</option>
+          <option value="Tutor(a)">Tutor(a)</option>
+          <option value="Outro">Outro</option>
+        </select>
+        <input type="text" id="pac-responsavel-cpf" placeholder="CPF do responsável" />
+        <input type="tel" id="pac-responsavel-telefone" placeholder="Telefone do responsável" />
+        <input type="tel" id="pac-responsavel-celular" placeholder="Celular do responsável" />
+        <input type="email" id="pac-responsavel-email" placeholder="E-mail do responsável" />
 
         <div class="modal-secao">Dados do atendimento</div>
         <label class="campo-label">Início do atendimento</label>
@@ -125,9 +172,9 @@
           <option value="">Selecione...</option>
           <option value="Pix">Pix</option>
           <option value="Dinheiro">Dinheiro</option>
-          <option value="Cartão de crédito">Cartão de crédito</option>
-          <option value="Cartão de débito">Cartão de débito</option>
-          <option value="Transferência bancária">Transferência bancária</option>
+          <option value="Cartão de crédito">Cartão de Crédito</option>
+          <option value="Cartão de débito">Cartão de Débito</option>
+          <option value="Transferência bancária">Transferência Bancária</option>
         </select>
         <input type="text" id="pac-profissional" placeholder="Profissional responsável" />
 
@@ -139,6 +186,7 @@
         <button id="btn-salvar-paciente" class="btn-primario" data-modo="">Salvar paciente</button>
       </div>
     </div>
+  </div>
   </div>
 
   <!-- Modal Nova Consulta -->
@@ -428,14 +476,26 @@
           <div class="perfil-secao">Dados pessoais</div>
           <div class="perfil-grade">
             <div class="perfil-campo"><span class="perfil-label">Data de nascimento</span><span class="perfil-valor" id="pf-nascimento"></span></div>
+            <div class="perfil-campo"><span class="perfil-label">CPF</span><span class="perfil-valor" id="pf-cpf"></span></div>
             <div class="perfil-campo"><span class="perfil-label">Estado civil</span><span class="perfil-valor" id="pf-estado-civil"></span></div>
             <div class="perfil-campo"><span class="perfil-label">Escolaridade</span><span class="perfil-valor" id="pf-escolaridade"></span></div>
             <div class="perfil-campo"><span class="perfil-label">Ocupação</span><span class="perfil-valor" id="pf-ocupacao"></span></div>
             <div class="perfil-campo"><span class="perfil-label">Telefone</span><span class="perfil-valor" id="pf-telefone"></span></div>
             <div class="perfil-campo"><span class="perfil-label">Celular</span><span class="perfil-valor" id="pf-celular"></span></div>
             <div class="perfil-campo"><span class="perfil-label">E-mail</span><span class="perfil-valor" id="pf-email"></span></div>
+            <div class="perfil-campo"><span class="perfil-label">Nome do pai</span><span class="perfil-valor" id="pf-nome-pai"></span></div>
+            <div class="perfil-campo"><span class="perfil-label">Nome da mãe</span><span class="perfil-valor" id="pf-nome-mae"></span></div>
             <div class="perfil-campo perfil-campo-largo"><span class="perfil-label">Endereço</span><span class="perfil-valor" id="pf-endereco"></span></div>
-            <div class="perfil-campo perfil-campo-largo"><span class="perfil-label">Filiação</span><span class="perfil-valor" id="pf-filiacao"></span></div>
+          </div>
+
+          <div class="perfil-secao">Responsável legal</div>
+          <div class="perfil-grade">
+            <div class="perfil-campo"><span class="perfil-label">Nome</span><span class="perfil-valor" id="pf-responsavel-nome"></span></div>
+            <div class="perfil-campo"><span class="perfil-label">Parentesco</span><span class="perfil-valor" id="pf-responsavel-parentesco"></span></div>
+            <div class="perfil-campo"><span class="perfil-label">CPF</span><span class="perfil-valor" id="pf-responsavel-cpf"></span></div>
+            <div class="perfil-campo"><span class="perfil-label">Telefone</span><span class="perfil-valor" id="pf-responsavel-telefone"></span></div>
+            <div class="perfil-campo"><span class="perfil-label">Celular</span><span class="perfil-valor" id="pf-responsavel-celular"></span></div>
+            <div class="perfil-campo"><span class="perfil-label">E-mail</span><span class="perfil-valor" id="pf-responsavel-email"></span></div>
           </div>
 
           <div class="perfil-secao">Dados do atendimento</div>

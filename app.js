@@ -264,7 +264,7 @@ async function carregarPacientes(filtro = '') {
                 </div>
                 <div class="pac-info">
                 <div class="pac-nome">${p.nome}</div>
-                <div class="pac-detalhe">${p.telefone || 'Sem telefone'} · Desde ${p.dataInicio || 'não informado'}</div>
+                <div class="pac-detalhe">${p.telefone || 'Sem telefone'} · Desde ${p.dataInicio ? new Date(p.dataInicio + 'T12:00:00').toLocaleDateString('pt-BR') : 'não informado'}</div>
                 </div>
                 <button class="btn-excluir" data-id="${p.id}">✕</button>
             </div>
@@ -315,26 +315,54 @@ function fecharModal() {
 }
 
 // Abre o modal ao clicar em novo paciente
-btnNovoPaciente.addEventListener('click', abrirModal);
+btnNovoPaciente.addEventListener('click', async () => {
+    // Limpa os campos
+    document.querySelector('#modal-paciente .modal-corpo').reset
+      ? document.querySelector('#modal-paciente .modal-corpo').reset()
+      : document.querySelectorAll('#modal-paciente input, #modal-paciente select, #modal-paciente textarea')
+          .forEach(el => el.value = '');
+
+    // Preenche o profissional automaticamente
+    const docConfig = await db.collection('configuracoes').doc(usuarioLogado.uid).get();
+    if (docConfig.exists && docConfig.data().nomeProfissional) {
+        document.getElementById('pac-profissional').value = docConfig.data().nomeProfissional;
+    }
+
+    // Reset do scroll
+    document.querySelector('#modal-paciente .modal-corpo').scrollTop = 0;
+
+    abrirModal();
+});
 
 // Fecha ao clicar no X
 btnFecharModal.addEventListener('click', fecharModal);
 
-// Fecha ao clicar no fundo escuro
-document.querySelector('.modal-fundo').addEventListener('click', fecharModal);
+// Fecha ao clicar no fundo escuro com confirmação
+document.querySelector('.modal-fundo').addEventListener('click', () => {
+    const confirmar = confirm('Tem certeza que deseja fechar? Os dados não salvos serão perdidos.');
+    if (confirmar) fecharModal();
+});
 
 // Salva o paciente
 btnSalvarPaciente.addEventListener('click', async () => {
     const nome = document.getElementById('pac-nome').value.trim();
     const dataNascimento = document.getElementById('pac-nascimento').value;
+    const cpf = document.getElementById('pac-cpf').value.trim();
     const endereco = document.getElementById('pac-endereco').value.trim();
     const telefone = document.getElementById('pac-telefone').value.trim();
     const celular = document.getElementById('pac-celular').value.trim();
-    const filiacao = document.getElementById('pac-filiacao').value.trim();
-    const estadoCivil = document.getElementById('pac-estado-civil').value.trim();
-    const escolaridade = document.getElementById('pac-escolaridade').value.trim();
-    const ocupacao = document.getElementById('pac-ocupacao').value.trim();
     const email = document.getElementById('pac-email').value.trim();
+    const estadoCivil = document.getElementById('pac-estado-civil').value;
+    const escolaridade = document.getElementById('pac-escolaridade').value;
+    const ocupacao = document.getElementById('pac-ocupacao').value.trim();
+    const nomePai = document.getElementById('pac-nome-pai').value.trim();
+    const nomeMae = document.getElementById('pac-nome-mae').value.trim();
+    const responsavelNome = document.getElementById('pac-responsavel-nome').value.trim();
+    const responsavelParentesco = document.getElementById('pac-responsavel-parentesco').value;
+    const responsavelCpf = document.getElementById('pac-responsavel-cpf').value.trim();
+    const responsavelTelefone = document.getElementById('pac-responsavel-telefone').value.trim();
+    const responsavelCelular = document.getElementById('pac-responsavel-celular').value.trim();
+    const responsavelEmail = document.getElementById('pac-responsavel-email').value.trim();
     const dataInicio = document.getElementById('pac-inicio').value.trim();
     const valorSessao = document.getElementById('pac-valor-sessao').value.trim();
     const formaPagamento = document.getElementById('pac-forma-pagamento').value;
@@ -357,13 +385,14 @@ btnSalvarPaciente.addEventListener('click', async () => {
     }
 
     const dadosPaciente = {
-        nome, dataNascimento, endereco, telefone, celular,
-        filiacao, estadoCivil, escolaridade, ocupacao, email,
+        nome, dataNascimento, cpf, endereco, telefone, celular, email,
+        estadoCivil, escolaridade, ocupacao, nomePai, nomeMae,
+        responsavelNome, responsavelParentesco, responsavelCpf,
+        responsavelTelefone, responsavelCelular, responsavelEmail,
         dataInicio, frequencia, diaSemana, horarioFixo, duracao,
         valorSessao, formaPagamento, profissional, motivo, observacoes
     };
 
-    // Verifica se é edição ou cadastro novo
     if (btnSalvarPaciente.dataset.modo === 'editar') {
         await db.collection('pacientes').doc(pacienteAtual.id).update(dadosPaciente);
 
@@ -505,15 +534,28 @@ let pacienteAtual = null;
 
 function abrirPerfil(paciente) {
   pacienteAtual = paciente;
-  
+
   // Avatar com iniciais
   const iniciais = paciente.nome.split(' ').map(n => n[0]).slice(0, 2).join('');
   document.getElementById('perfil-avatar').textContent = iniciais;
   document.getElementById('perfil-nome').textContent = paciente.nome;
 
+  // Idade calculada automaticamente
+  let idadeTexto = '';
+  if (paciente.dataNascimento) {
+    const nascimento = new Date(paciente.dataNascimento + 'T12:00:00');
+    const hoje = new Date();
+    let idade = hoje.getFullYear() - nascimento.getFullYear();
+    const m = hoje.getMonth() - nascimento.getMonth();
+    if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) idade--;
+    idadeTexto = ` · ${idade} anos`;
+  }
+
+  document.getElementById('pf-nascimento').textContent = paciente.dataNascimento
+    ? new Date(paciente.dataNascimento + 'T12:00:00').toLocaleDateString('pt-BR') + idadeTexto
+    : '—';
+
   // Dados pessoais
-  document.getElementById('pf-nascimento').textContent = paciente.dataNascimento ? new Date(paciente.dataNascimento + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
-  document.getElementById('pf-inicio').textContent = paciente.dataInicio ? new Date(paciente.dataInicio + 'T12:00:00').toLocaleDateString('pt-BR') : '—';
   document.getElementById('pf-estado-civil').textContent = paciente.estadoCivil || '—';
   document.getElementById('pf-escolaridade').textContent = paciente.escolaridade || '—';
   document.getElementById('pf-ocupacao').textContent = paciente.ocupacao || '—';
@@ -521,11 +563,26 @@ function abrirPerfil(paciente) {
   document.getElementById('pf-celular').textContent = paciente.celular || '—';
   document.getElementById('pf-email').textContent = paciente.email || '—';
   document.getElementById('pf-endereco').textContent = paciente.endereco || '—';
-  document.getElementById('pf-filiacao').textContent = paciente.filiacao || '—';
+  document.getElementById('pf-cpf').textContent = paciente.cpf || '—';
+  document.getElementById('pf-nome-pai').textContent = paciente.nomePai || '—';
+  document.getElementById('pf-nome-mae').textContent = paciente.nomeMae || '—';
+
+  // Responsável legal
+  document.getElementById('pf-responsavel-nome').textContent = paciente.responsavelNome || '—';
+  document.getElementById('pf-responsavel-parentesco').textContent = paciente.responsavelParentesco || '—';
+  document.getElementById('pf-responsavel-cpf').textContent = paciente.responsavelCpf || '—';
+  document.getElementById('pf-responsavel-telefone').textContent = paciente.responsavelTelefone || '—';
+  document.getElementById('pf-responsavel-celular').textContent = paciente.responsavelCelular || '—';
+  document.getElementById('pf-responsavel-email').textContent = paciente.responsavelEmail || '—';
 
   // Dados do atendimento
+  document.getElementById('pf-inicio').textContent = paciente.dataInicio
+    ? new Date(paciente.dataInicio + 'T12:00:00').toLocaleDateString('pt-BR')
+    : '—';
   document.getElementById('pf-frequencia').textContent = paciente.frequencia || '—';
-  document.getElementById('pf-dia-semana').textContent = paciente.diaSemana ? ['', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][paciente.diaSemana] : '—';
+  document.getElementById('pf-dia-semana').textContent = paciente.diaSemana
+    ? ['', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][paciente.diaSemana]
+    : '—';
   document.getElementById('pf-horario-fixo').textContent = paciente.horarioFixo || '—';
   document.getElementById('pf-valor').textContent = paciente.valorSessao ? `R$ ${paciente.valorSessao}` : '—';
   document.getElementById('pf-pagamento').textContent = paciente.formaPagamento || '—';
@@ -539,7 +596,7 @@ function abrirPerfil(paciente) {
   document.querySelectorAll('.tela').forEach(t => t.classList.remove('ativa'));
   document.getElementById('tela-perfil').classList.add('ativa');
 
-  //Cronômetro
+  // Cronômetro
   const duracao = parseInt(paciente.duracao) || 50;
   const display = document.getElementById('crono-tempo');
   display.textContent = `${String(duracao).padStart(2, '0')}:00`;
@@ -548,13 +605,14 @@ function abrirPerfil(paciente) {
 
   document.getElementById('btn-iniciar-sessao').style.display = 'inline-block';
   document.getElementById('btn-pausar-sessao').style.display = 'none';
-  document.getElementById('btn-pausar-sessao').textContent = '⏸ Pausar';
+  document.getElementById('btn-pausar-sessao').textContent = 'Pausar';
   document.getElementById('btn-resetar-sessao').style.display = 'none';
 
   document.getElementById('btn-iniciar-sessao').onclick = () => iniciarCrono(duracao);
   document.getElementById('btn-pausar-sessao').onclick = pausarCrono;
   document.getElementById('btn-resetar-sessao').onclick = () => resetarCrono(duracao);
 
+  carregarAnotacoes(paciente.id);
   carregarPagamentos(paciente.id);
 }
 
@@ -785,14 +843,22 @@ document.getElementById('lista-pacientes').addEventListener('click', async (e) =
 document.getElementById('btn-editar-paciente').addEventListener('click', () => {
     document.getElementById('pac-nome').value = pacienteAtual.nome || '';
     document.getElementById('pac-nascimento').value = pacienteAtual.dataNascimento || '';
+    document.getElementById('pac-cpf').value = pacienteAtual.cpf || '';
     document.getElementById('pac-endereco').value = pacienteAtual.endereco || '';
     document.getElementById('pac-telefone').value = pacienteAtual.telefone || '';
     document.getElementById('pac-celular').value = pacienteAtual.celular || '';
-    document.getElementById('pac-filiacao').value = pacienteAtual.filiacao || '';
+    document.getElementById('pac-email').value = pacienteAtual.email || '';
     document.getElementById('pac-estado-civil').value = pacienteAtual.estadoCivil || '';
     document.getElementById('pac-escolaridade').value = pacienteAtual.escolaridade || '';
     document.getElementById('pac-ocupacao').value = pacienteAtual.ocupacao || '';
-    document.getElementById('pac-email').value = pacienteAtual.email || '';
+    document.getElementById('pac-nome-pai').value = pacienteAtual.nomePai || '';
+    document.getElementById('pac-nome-mae').value = pacienteAtual.nomeMae || '';
+    document.getElementById('pac-responsavel-nome').value = pacienteAtual.responsavelNome || '';
+    document.getElementById('pac-responsavel-parentesco').value = pacienteAtual.responsavelParentesco || '';
+    document.getElementById('pac-responsavel-cpf').value = pacienteAtual.responsavelCpf || '';
+    document.getElementById('pac-responsavel-telefone').value = pacienteAtual.responsavelTelefone || '';
+    document.getElementById('pac-responsavel-celular').value = pacienteAtual.responsavelCelular || '';
+    document.getElementById('pac-responsavel-email').value = pacienteAtual.responsavelEmail || '';
     document.getElementById('pac-inicio').value = pacienteAtual.dataInicio || '';
     document.getElementById('pac-frequencia').value = pacienteAtual.frequencia || '';
     document.getElementById('pac-dia-semana').value = pacienteAtual.diaSemana || '';
@@ -808,8 +874,11 @@ document.getElementById('btn-editar-paciente').addEventListener('click', () => {
     btnSalvarPaciente.textContent = 'Atualizar paciente';
     btnSalvarPaciente.dataset.modo = 'editar';
 
+    const modalCorpo = document.querySelector('#modal-paciente .modal-corpo');
+    modalCorpo.scrollTop = 0;
+
     abrirModal();
-})
+});
 
 /* Configurações da Clínica */
 
@@ -1286,8 +1355,8 @@ document.getElementById('grade-agenda').addEventListener('click', async (e) => {
 async function carregarAlertas() {
   const listaAlertas = document.getElementById('lista-alertas');
   const alertas = [];
-  const hoje = formatarDataISO(new Date());
   const agora = new Date();
+  const hoje = formatarDataISO(agora);
   const mesAtualNum = agora.getMonth() + 1;
   const anoAtual = agora.getFullYear();
 
@@ -1378,12 +1447,12 @@ async function carregarAlertas() {
   );
 
   pagamentosAtrasados.forEach(p => {
-    const meses = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    const mesesNomes = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
       'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
     alertas.push({
       tipo: 'urgente',
       texto: `Pagamento em atraso de ${mapaPacientes[p.pacienteId] || 'Paciente'}`,
-      tempo: `R$ ${p.valor} · ${meses[p.mes]} de ${p.ano}`
+      tempo: `R$ ${p.valor} · ${mesesNomes[p.mes]} de ${p.ano}`
     });
   });
 
@@ -1406,6 +1475,35 @@ async function carregarAlertas() {
         tipo: 'atencao',
         texto: `${p.nome} sem sessão há ${diasSem} dias`,
         tempo: `Última sessão: ${new Date(ultima.data + 'T12:00:00').toLocaleDateString('pt-BR')}`
+      });
+    }
+  });
+
+  // Alerta 7 — Aniversários
+  const diaHoje = agora.getDate();
+  const mesHoje = agora.getMonth() + 1;
+  const diaAmanha = amanha.getDate();
+  const mesAmanha = amanha.getMonth() + 1;
+
+  pacientes.forEach(p => {
+    if (!p.dataNascimento) return;
+
+    const nascimento = new Date(p.dataNascimento + 'T12:00:00');
+    const diaNasc = nascimento.getDate();
+    const mesNasc = nascimento.getMonth() + 1;
+
+    if (diaNasc === diaHoje && mesNasc === mesHoje) {
+      const idade = agora.getFullYear() - nascimento.getFullYear();
+      alertas.push({
+        tipo: 'ok',
+        texto: `Hoje é aniversário de ${p.nome}!`,
+        tempo: `${idade} anos`
+      });
+    } else if (diaNasc === diaAmanha && mesNasc === mesAmanha) {
+      alertas.push({
+        tipo: 'atencao',
+        texto: `Amanhã é aniversário de ${p.nome}`,
+        tempo: `${new Date(p.dataNascimento + 'T12:00:00').toLocaleDateString('pt-BR')}`
       });
     }
   });
