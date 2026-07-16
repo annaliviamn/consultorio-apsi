@@ -285,51 +285,33 @@ const erroPaciente = document.getElementById('erro-paciente');
 
 function abrirModal() {
     modalPaciente.classList.remove('escondido');
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            document.querySelector('#modal-paciente .modal-corpo').scrollTop = 0;
+        });
+    });
 }
 
 function fecharModal() {
-  modalPaciente.classList.add('escondido');
-  document.getElementById('pac-nome').value = '';
-  document.getElementById('pac-nascimento').value = '';
-  document.getElementById('pac-endereco').value = '';
-  document.getElementById('pac-telefone').value = '';
-  document.getElementById('pac-celular').value = '';
-  document.getElementById('pac-filiacao').value = '';
-  document.getElementById('pac-estado-civil').value = '';
-  document.getElementById('pac-escolaridade').value = '';
-  document.getElementById('pac-ocupacao').value = '';
-  document.getElementById('pac-email').value = '';
-  document.getElementById('pac-inicio').value = '';
-  document.getElementById('pac-frequencia').value = '';
-  document.getElementById('pac-dia-semana').value = '';
-  document.getElementById('pac-horario-fixo').value = '';
-  document.getElementById('pac-valor-sessao').value = '';
-  document.getElementById('pac-forma-pagamento').value = '';
-  document.getElementById('pac-profissional').value = '';
-  document.getElementById('pac-motivo').value = '';
-  document.getElementById('pac-observacoes').value = '';
-  btnSalvarPaciente.textContent = 'Salvar paciente';
-  btnSalvarPaciente.dataset.modo = '';
-  document.querySelector('.modal-topo h2').textContent = 'Novo paciente';
-  erroPaciente.textContent = '';
+    modalPaciente.classList.add('escondido');
+    document.querySelectorAll('#modal-paciente input, #modal-paciente select, #modal-paciente textarea')
+        .forEach(el => el.value = '');
+    document.querySelector('#modal-paciente .modal-corpo').scrollTop = 0;
+    btnSalvarPaciente.textContent = 'Salvar paciente';
+    btnSalvarPaciente.dataset.modo = '';
+    document.querySelector('.modal-topo h2').textContent = 'Novo paciente';
+    erroPaciente.textContent = '';
 }
 
 // Abre o modal ao clicar em novo paciente
 btnNovoPaciente.addEventListener('click', async () => {
-    // Limpa os campos
-    document.querySelector('#modal-paciente .modal-corpo').reset
-      ? document.querySelector('#modal-paciente .modal-corpo').reset()
-      : document.querySelectorAll('#modal-paciente input, #modal-paciente select, #modal-paciente textarea')
-          .forEach(el => el.value = '');
+    document.querySelectorAll('#modal-paciente input, #modal-paciente select, #modal-paciente textarea')
+        .forEach(el => el.value = '');
 
-    // Preenche o profissional automaticamente
     const docConfig = await db.collection('configuracoes').doc(usuarioLogado.uid).get();
     if (docConfig.exists && docConfig.data().nomeProfissional) {
         document.getElementById('pac-profissional').value = docConfig.data().nomeProfissional;
     }
-
-    // Reset do scroll
-    document.querySelector('#modal-paciente .modal-corpo').scrollTop = 0;
 
     abrirModal();
 });
@@ -355,8 +337,10 @@ btnSalvarPaciente.addEventListener('click', async () => {
     const estadoCivil = document.getElementById('pac-estado-civil').value;
     const escolaridade = document.getElementById('pac-escolaridade').value;
     const ocupacao = document.getElementById('pac-ocupacao').value.trim();
-    const nomePai = document.getElementById('pac-nome-pai').value.trim();
-    const nomeMae = document.getElementById('pac-nome-mae').value.trim();
+    const filiacao1Parentesco = document.getElementById('pac-filiacao1-parentesco').value.trim();
+    const filiacao1Nome = document.getElementById('pac-filiacao1-nome').value.trim();
+    const filiacao2Parentesco = document.getElementById('pac-filiacao2-parentesco').value.trim();
+    const filiacao2Nome = document.getElementById('pac-filiacao2-nome').value.trim();
     const responsavelNome = document.getElementById('pac-responsavel-nome').value.trim();
     const responsavelParentesco = document.getElementById('pac-responsavel-parentesco').value;
     const responsavelCpf = document.getElementById('pac-responsavel-cpf').value.trim();
@@ -386,7 +370,8 @@ btnSalvarPaciente.addEventListener('click', async () => {
 
     const dadosPaciente = {
         nome, dataNascimento, cpf, endereco, telefone, celular, email,
-        estadoCivil, escolaridade, ocupacao, nomePai, nomeMae,
+        estadoCivil, escolaridade, ocupacao, filiacao1Parentesco, filiacao1Nome, 
+        filiacao2Parentesco, filiacao2Nome,
         responsavelNome, responsavelParentesco, responsavelCpf,
         responsavelTelefone, responsavelCelular, responsavelEmail,
         dataInicio, frequencia, diaSemana, horarioFixo, duracao,
@@ -414,7 +399,6 @@ btnSalvarPaciente.addEventListener('click', async () => {
     });
 
     fecharModal();
-    carregarPacientes();
 
     const docSalvo = await db.collection('pacientes').doc(novoDoc.id).get();
     const pacienteSalvo = { id: novoDoc.id, ...docSalvo.data() };
@@ -431,7 +415,11 @@ btnSalvarPaciente.addEventListener('click', async () => {
         dataPagamento: null
     });
 
-    navegarPara('prontuarios');
+    document.querySelectorAll('.tela').forEach(t => t.classList.remove('ativa'));
+    document.querySelectorAll('.aba').forEach(a => a.classList.remove('ativa'));
+    document.getElementById('tela-prontuarios').classList.add('ativa');
+    document.querySelector('.aba[data-tela="prontuarios"]').classList.add('ativa');
+    await carregarPacientes();
     carregarCalendario();
 });
 
@@ -556,41 +544,48 @@ function abrirPerfil(paciente) {
     : '—';
 
   // Dados pessoais
-  document.getElementById('pf-estado-civil').textContent = paciente.estadoCivil || '—';
-  document.getElementById('pf-escolaridade').textContent = paciente.escolaridade || '—';
-  document.getElementById('pf-ocupacao').textContent = paciente.ocupacao || '—';
-  document.getElementById('pf-telefone').textContent = paciente.telefone || '—';
-  document.getElementById('pf-celular').textContent = paciente.celular || '—';
-  document.getElementById('pf-email').textContent = paciente.email || '—';
-  document.getElementById('pf-endereco').textContent = paciente.endereco || '—';
-  document.getElementById('pf-cpf').textContent = paciente.cpf || '—';
-  document.getElementById('pf-nome-pai').textContent = paciente.nomePai || '—';
-  document.getElementById('pf-nome-mae').textContent = paciente.nomeMae || '—';
+  document.getElementById('pf-nascimento').textContent = paciente.dataNascimento
+    ? new Date(paciente.dataNascimento + 'T12:00:00').toLocaleDateString('pt-BR') + idadeTexto
+    : 'Não informado';
+  document.getElementById('pf-cpf').textContent = paciente.cpf || 'Não informado';
+  document.getElementById('pf-estado-civil').textContent = paciente.estadoCivil || 'Não informado';
+  document.getElementById('pf-escolaridade').textContent = paciente.escolaridade || 'Não informado';
+  document.getElementById('pf-ocupacao').textContent = paciente.ocupacao || 'Não informado';
+  document.getElementById('pf-telefone').textContent = paciente.telefone || 'Não informado';
+  document.getElementById('pf-celular').textContent = paciente.celular || 'Não informado';
+  document.getElementById('pf-email').textContent = paciente.email || 'Não informado';
+  document.getElementById('pf-endereco').textContent = paciente.endereco || 'Não informado';
+  document.getElementById('pf-filiacao1').textContent = paciente.filiacao1Parentesco && paciente.filiacao1Nome
+      ? `${paciente.filiacao1Parentesco} — ${paciente.filiacao1Nome}`
+      : 'Não informado';
+  document.getElementById('pf-filiacao2').textContent = paciente.filiacao2Parentesco && paciente.filiacao2Nome
+      ? `${paciente.filiacao2Parentesco} — ${paciente.filiacao2Nome}`
+      : 'Não informado';
 
   // Responsável legal
-  document.getElementById('pf-responsavel-nome').textContent = paciente.responsavelNome || '—';
-  document.getElementById('pf-responsavel-parentesco').textContent = paciente.responsavelParentesco || '—';
-  document.getElementById('pf-responsavel-cpf').textContent = paciente.responsavelCpf || '—';
-  document.getElementById('pf-responsavel-telefone').textContent = paciente.responsavelTelefone || '—';
-  document.getElementById('pf-responsavel-celular').textContent = paciente.responsavelCelular || '—';
-  document.getElementById('pf-responsavel-email').textContent = paciente.responsavelEmail || '—';
+  document.getElementById('pf-responsavel-nome').textContent = paciente.responsavelNome || 'Não informado';
+  document.getElementById('pf-responsavel-parentesco').textContent = paciente.responsavelParentesco || 'Não informado';
+  document.getElementById('pf-responsavel-cpf').textContent = paciente.responsavelCpf || 'Não informado';
+  document.getElementById('pf-responsavel-telefone').textContent = paciente.responsavelTelefone || 'Não informado';
+  document.getElementById('pf-responsavel-celular').textContent = paciente.responsavelCelular || 'Não informado';
+  document.getElementById('pf-responsavel-email').textContent = paciente.responsavelEmail || 'Não informado';
 
   // Dados do atendimento
   document.getElementById('pf-inicio').textContent = paciente.dataInicio
     ? new Date(paciente.dataInicio + 'T12:00:00').toLocaleDateString('pt-BR')
-    : '—';
-  document.getElementById('pf-frequencia').textContent = paciente.frequencia || '—';
+    : 'Não informado';
+  document.getElementById('pf-frequencia').textContent = paciente.frequencia || 'Não informado';
   document.getElementById('pf-dia-semana').textContent = paciente.diaSemana
     ? ['', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][paciente.diaSemana]
-    : '—';
-  document.getElementById('pf-horario-fixo').textContent = paciente.horarioFixo || '—';
-  document.getElementById('pf-valor').textContent = paciente.valorSessao ? `R$ ${paciente.valorSessao}` : '—';
-  document.getElementById('pf-pagamento').textContent = paciente.formaPagamento || '—';
-  document.getElementById('pf-profissional').textContent = paciente.profissional || '—';
+    : 'Não informado';
+  document.getElementById('pf-horario-fixo').textContent = paciente.horarioFixo || 'Não informado';
+  document.getElementById('pf-valor').textContent = paciente.valorSessao ? `R$ ${paciente.valorSessao}` : 'Não informado';
+  document.getElementById('pf-pagamento').textContent = paciente.formaPagamento || 'Não informado';
+  document.getElementById('pf-profissional').textContent = paciente.profissional || 'Não informado';
 
   // Informações clínicas
-  document.getElementById('pf-motivo').textContent = paciente.motivo || '—';
-  document.getElementById('pf-observacoes').textContent = paciente.observacoes || '—';
+  document.getElementById('pf-motivo').textContent = paciente.motivo || 'Não informado';
+  document.getElementById('pf-observacoes').textContent = paciente.observacoes || 'Não informado';
 
   // Esconde todas as telas e mostra o perfil
   document.querySelectorAll('.tela').forEach(t => t.classList.remove('ativa'));
@@ -856,8 +851,10 @@ document.getElementById('btn-editar-paciente').addEventListener('click', () => {
     document.getElementById('pac-estado-civil').value = pacienteAtual.estadoCivil || '';
     document.getElementById('pac-escolaridade').value = pacienteAtual.escolaridade || '';
     document.getElementById('pac-ocupacao').value = pacienteAtual.ocupacao || '';
-    document.getElementById('pac-nome-pai').value = pacienteAtual.nomePai || '';
-    document.getElementById('pac-nome-mae').value = pacienteAtual.nomeMae || '';
+    document.getElementById('pac-filiacao1-parentesco').value = pacienteAtual.filiacao1Parentesco || '';
+    document.getElementById('pac-filiacao1-nome').value = pacienteAtual.filiacao1Nome || '';
+    document.getElementById('pac-filiacao2-parentesco').value = pacienteAtual.filiacao2Parentesco || '';
+    document.getElementById('pac-filiacao2-nome').value = pacienteAtual.filiacao2Nome || '';
     document.getElementById('pac-responsavel-nome').value = pacienteAtual.responsavelNome || '';
     document.getElementById('pac-responsavel-parentesco').value = pacienteAtual.responsavelParentesco || '';
     document.getElementById('pac-responsavel-cpf').value = pacienteAtual.responsavelCpf || '';
@@ -1180,6 +1177,7 @@ async function carregarAgenda() {
             <div class="slot-nome">${nomePaciente}</div>
             <div class="slot-tipo">${consulta.duracao} min · ${consulta.status}</div>
           </div>
+          <button class="btn-editar-consulta-agenda btn-nav" data-id="${consulta.id}">✎ Editar</button>
         </div>
       `;
     }),
@@ -1194,6 +1192,7 @@ async function carregarAgenda() {
               <div class="slot-nome">${nomePaciente}</div>
               <div class="slot-tipo">${consulta.duracao} min · ${consulta.status}</div>
             </div>
+            <button class="btn-editar-consulta-agenda btn-nav" data-id="${consulta.id}">✎ Editar</button>
           </div>
         `;
       }
@@ -1208,6 +1207,14 @@ async function carregarAgenda() {
       `;
     })
   ].join('');
+
+  document.querySelectorAll('.btn-editar-consulta-agenda').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const doc = await db.collection('consultas').doc(id).get();
+      if (doc.exists) abrirModalEditarConsulta({ id: doc.id, ...doc.data() });
+    });
+  });
 }
 
 // Carrega agenda ao clicar na aba
@@ -1349,10 +1356,10 @@ document.getElementById('btn-excluir-consulta').addEventListener('click', async 
 // Clique numa consulta abre o modal de edição
 document.getElementById('grade-agenda').addEventListener('click', async (e) => {
   const slot = e.target.closest('.slot-bloco:not(.vazio)');
-  if (slot && !e.target.classList.contains('btn-encaixe')) {
-    const id = Number(slot.dataset.id);
-    const consulta = await db.consultas.get(id);
-    if (consulta) abrirModalEditarConsulta(consulta);
+  if (slot && !e.target.classList.contains('btn-encaixe') && !e.target.classList.contains('btn-editar-consulta-agenda')) {
+    const id = slot.dataset.id;
+    const doc = await db.collection('consultas').doc(id).get();
+    if (doc.exists) abrirModalEditarConsulta({ id: doc.id, ...doc.data() });
   }
 });
 
