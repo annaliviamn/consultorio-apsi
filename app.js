@@ -287,7 +287,10 @@ function abrirModal() {
     modalPaciente.classList.remove('escondido');
     requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-            document.querySelector('#modal-paciente .modal-corpo').scrollTop = 0;
+            const caixa = document.querySelector('#modal-paciente .modal-caixa');
+            const corpo = document.querySelector('#modal-paciente .modal-corpo');
+            if (caixa) caixa.scrollTop = 0;
+            if (corpo) corpo.scrollTop = 0;
         });
     });
 }
