@@ -55,6 +55,18 @@ function atualizarSaudacao() {
     saudacaoData.textContent = `${dias[agora.getDay()]}, ${agora.getDate()} de ${meses[agora.getMonth()]} de ${agora.getFullYear()}`;
 }
 
+/* Relógio em tempo real */
+function atualizarRelogio() {
+  const agora = new Date();
+  const horas = String(agora.getHours()).padStart(2, '0');
+  const minutos = String(agora.getMinutes()).padStart(2, '0');
+  const segundos = String(agora.getSeconds()).padStart(2, '0');
+  document.getElementById('relogio').textContent = `${horas}:${minutos}:${segundos}`;
+}
+
+atualizarRelogio();
+setInterval(atualizarRelogio, 1000);
+
 /* Navegação Entre Abas */
 function navegarPara(nomeTela) {
   document.querySelectorAll('.tela').forEach(t => t.classList.remove('ativa'));

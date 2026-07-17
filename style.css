@@ -1752,7 +1752,7 @@ body {
 
 @media (max-width: 768px) {
   .cards-resumo {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   #cabecalho {
@@ -1861,4 +1861,12 @@ body {
   font-size: 14px;
   color: var(--texto);
   font-family: sans-serif;
+}
+
+/* Relógio Dashboard */
+#relogio {
+  font-size: 14px;
+  font-family: monospace;
+  color: var(--texto2);
+  letter-spacing: 1px;
 }
