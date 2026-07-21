@@ -35,7 +35,6 @@ linkIrCadastro.addEventListener('click', () => mostrarTela(telaCadastro));
 linkVoltarLogin.addEventListener('click', () => mostrarTela(telaLogin));
 
 /* Saudação e Data */
-
 function atualizarSaudacao() {
     const agora = new Date();
     const hora = agora.getHours();
@@ -634,52 +633,195 @@ async function carregarPagamentos(pacienteId) {
 
   const pagamentos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-  pagamentos.sort((a, b) => {
-    if (a.ano !== b.ano) return b.ano - a.ano;
-    return b.mes - a.mes;
-  });
-
-  const lista = document.getElementById('lista-pagamentos');
-  const meses = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-
   const agora = new Date();
   const mesAtualNum = agora.getMonth() + 1;
   const anoAtual = agora.getFullYear();
 
-  if (pagamentos.length === 0) {
-    lista.innerHTML = '<p class="vazio">Nenhum pagamento registrado ainda.</p>';
-    return;
-  }
+  const meses = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
-  lista.innerHTML = pagamentos.map(p => {
-    let status = p.status;
-    if (status === 'pendente' && (p.ano < anoAtual || (p.ano === anoAtual && p.mes < mesAtualNum))) {
-      status = 'atrasado';
-    }
+  // Monta o select de anos automaticamente
+  const anosExistentes = new Set(pagamentos.map(p => p.ano));
+  anosExistentes.add(anoAtual);
+  const anosOrdenados = [...anosExistentes].sort((a, b) => b - a);
 
-    return `
-      <div class="pagamento-item">
-        <div class="pagamento-mes">${meses[p.mes]} ${p.ano}</div>
-        <div class="pagamento-valor">R$ ${p.valor || '—'}</div>
-        <button class="pagamento-status ${status}" data-id="${p.id}" data-status="${p.status}">
-          ${status === 'pago' ? 'Pago' : status === 'atrasado' ? 'Atrasado' : 'Pendente'}
-        </button>
+  const selectAno = document.getElementById('filtro-ano-pagamento');
+  selectAno.innerHTML = anosOrdenados.map(ano =>
+    `<option value="${ano}" ${ano === anoAtual ? 'selected' : ''}>${ano}</option>`
+  ).join('');
+
+  function renderPagamentos() {
+    const anoFiltrado = Number(selectAno.value);
+
+    const pagamentosFiltrados = pagamentos
+      .filter(p => p.ano === anoFiltrado)
+      .sort((a, b) => a.mes - b.mes);
+
+    // Resumo anual
+    const resumo = document.getElementById('resumo-pagamentos-anual');
+    const totalPago = pagamentosFiltrados
+      .filter(p => p.status === 'pago')
+      .reduce((acc, p) => acc + Number(p.valor || 0), 0);
+    const totalPendente = pagamentosFiltrados
+      .filter(p => p.status !== 'pago')
+      .reduce((acc, p) => acc + Number(p.valor || 0), 0);
+
+    resumo.innerHTML = `
+      <div class="pagamento-item" style="background:var(--bg);">
+        <div class="pagamento-mes">Resumo ${anoFiltrado}</div>
+        <div class="pagamento-valor" style="color:var(--verde)">Pago: R$ ${totalPago}</div>
+        <div class="pagamento-valor" style="color:var(--amarelo)">Pendente: R$ ${totalPendente}</div>
       </div>
     `;
-  }).join('');
 
-  document.querySelectorAll('.pagamento-status').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = btn.dataset.id;
-      const statusAtual = btn.dataset.status;
-      const novoStatus = statusAtual === 'pago' ? 'pendente' : 'pago';
-      const dataPagamento = novoStatus === 'pago' ? new Date().toISOString().split('T')[0] : null;
-      await db.collection('pagamentos').doc(id).update({ status: novoStatus, dataPagamento });
-      carregarPagamentos(pacienteAtual.id);
+    const lista = document.getElementById('lista-pagamentos');
+
+    if (pagamentosFiltrados.length === 0) {
+      lista.innerHTML = '<p class="vazio">Nenhum pagamento registrado neste ano.</p>';
+      return;
+    }
+
+    lista.innerHTML = pagamentosFiltrados.map(p => {
+      let status = p.status;
+      if (status === 'pendente' && (p.ano < anoAtual || (p.ano === anoAtual && p.mes < mesAtualNum))) {
+        status = 'atrasado';
+      }
+
+      return `
+        <div class="pagamento-item">
+          <div class="pagamento-mes">${meses[p.mes]} ${p.ano}</div>
+          <div class="pagamento-valor">R$ ${p.valor || '—'}</div>
+          <button class="pagamento-status ${status}" data-id="${p.id}" data-status="${p.status}">
+            ${status === 'pago' ? 'Pago' : status === 'atrasado' ? 'Atrasado' : 'Pendente'}
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    document.querySelectorAll('.pagamento-status').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        const statusAtual = btn.dataset.status;
+        const novoStatus = statusAtual === 'pago' ? 'pendente' : 'pago';
+        const dataPagamento = novoStatus === 'pago' ? new Date().toISOString().split('T')[0] : null;
+        await db.collection('pagamentos').doc(id).update({ status: novoStatus, dataPagamento });
+        carregarPagamentos(pacienteAtual.id);
+      });
     });
-  });
+  }
+
+  selectAno.onchange = renderPagamentos;
+  renderPagamentos();
 }
+
+/* Exportar histórico de pagamentos */
+document.getElementById('btn-exportar-historico').addEventListener('click', async () => {
+  const anoFiltrado = Number(document.getElementById('filtro-ano-pagamento').value);
+
+  const snapshotPagamentos = await db.collection('pagamentos')
+    .where('pacienteId', '==', pacienteAtual.id)
+    .get();
+
+  const pagamentos = snapshotPagamentos.docs
+    .map(doc => ({ id: doc.id, ...doc.data() }))
+    .filter(p => p.ano === anoFiltrado)
+    .sort((a, b) => a.mes - b.mes);
+
+  const docConfig = await db.collection('configuracoes').doc(usuarioLogado.uid).get();
+  const config = docConfig.exists ? docConfig.data() : {};
+
+  const meses = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+  const totalPago = pagamentos.filter(p => p.status === 'pago').reduce((acc, p) => acc + Number(p.valor || 0), 0);
+  const totalPendente = pagamentos.filter(p => p.status !== 'pago').reduce((acc, p) => acc + Number(p.valor || 0), 0);
+
+  const agora = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  const linhasPagamentos = pagamentos.map((p, i) => `
+    <tr style="background:${i % 2 === 0 ? '#ffffff' : '#F7F5F2'};">
+      <td style="padding:10px 12px;font-size:13px;border-bottom:1px solid #EDEAE5;">${i + 1}</td>
+      <td style="padding:10px 12px;font-size:13px;border-bottom:1px solid #EDEAE5;">${meses[p.mes]}</td>
+      <td style="padding:10px 12px;font-size:13px;border-bottom:1px solid #EDEAE5;font-weight:600;">R$ ${Number(p.valor || 0).toFixed(2)}</td>
+      <td style="padding:10px 12px;font-size:13px;border-bottom:1px solid #EDEAE5;">
+        <span style="font-size:13px;color:${p.status === 'pago' ? '#2C2A27' : '#C46060'};font-weight:${p.status === 'pago' ? 'normal' : '600'};">
+          ${p.status === 'pago' ? 'Pago' : 'Pendente'}
+        </span>
+      </td>
+      <td style="padding:10px 12px;font-size:13px;border-bottom:1px solid #EDEAE5;">${p.dataPagamento ? new Date(p.dataPagamento + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}</td>
+    </tr>
+  `).join('');
+
+  const conteudo = document.createElement('div');
+  conteudo.style.cssText = 'font-family:Arial,sans-serif;max-width:800px;padding:40px;color:#2C2A27;background:#ffffff;';
+  conteudo.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;border-bottom:2px solid #5B7FA6;padding-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <img src="assets/logo.jpg" style="height:60px;width:auto;border-radius:8px;" />
+        <div>
+          <h1 style="font-size:18px;color:#5B7FA6;margin:0;font-weight:700;">${config.nomeEmpresa || config.nomeClinica || 'Consultório'}</h1>
+          ${config.cnpj ? `<div style="font-size:11px;color:#6B6760;margin-top:2px;">CNPJ: ${config.cnpj}</div>` : ''}
+          ${config.enderecoClinica ? `<div style="font-size:11px;color:#6B6760;">${config.enderecoClinica}</div>` : ''}
+          ${config.telefoneClinica ? `<div style="font-size:11px;color:#6B6760;">Tel: ${config.telefoneClinica}</div>` : ''}
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:11px;color:#6B6760;text-transform:uppercase;letter-spacing:1px;">Histórico de Pagamentos</div>
+        <div style="font-size:28px;font-weight:700;color:#5B7FA6;">${anoFiltrado}</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:24px;">
+      <div style="font-size:13px;color:#6B6760;">Paciente</div>
+      <div style="font-size:16px;font-weight:600;">${pacienteAtual.nome}</div>
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+      <thead>
+        <tr style="background:#5B7FA6;color:#ffffff;">
+          <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;border-radius:4px 0 0 4px;">#</th>
+          <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;">Mês</th>
+          <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;">Valor</th>
+          <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;">Status</th>
+          <th style="padding:10px 12px;text-align:left;font-size:12px;font-weight:600;border-radius:0 4px 4px 0;">Data do pagamento</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${linhasPagamentos}
+      </tbody>
+    </table>
+
+    <div style="background:#F7F5F2;border-radius:8px;padding:16px;margin-bottom:32px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:13px;color:#6B6760;">Total pago</span>
+        <span style="font-size:14px;font-weight:600;color:#6BAF8E;">R$ ${totalPago.toFixed(2)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;">
+        <span style="font-size:13px;color:#6B6760;">Total pendente</span>
+        <span style="font-size:14px;font-weight:600;color:#C46060;">R$ ${totalPendente.toFixed(2)}</span>
+      </div>
+    </div>
+
+    <div style="font-size:11px;color:#6B6760;text-align:center;border-top:1px solid #D8D4CE;padding-top:16px;">
+      Documento gerado em ${agora} · ${config.nomeEmpresa || config.nomeClinica || 'Consultório'}
+    </div>
+  `;
+
+  document.body.appendChild(conteudo);
+
+  const canvas = await html2canvas(conteudo, { scale: 2, useCORS: true });
+  const imgData = canvas.toDataURL('image/png');
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const largura = pdf.internal.pageSize.getWidth();
+  const altura = (canvas.height * largura) / canvas.width;
+
+  pdf.addImage(imgData, 'PNG', 0, 0, largura, altura);
+  pdf.save(`historico-pagamentos-${pacienteAtual.nome.toLowerCase().replace(/\s+/g, '-')}-${anoFiltrado}.pdf`);
+
+  document.body.removeChild(conteudo);
+});
 
 // Modal de pagamento
 const modalPagamento = document.getElementById('modal-pagamento');
@@ -789,7 +931,7 @@ document.getElementById('btn-exportar-prontuario').addEventListener('click', asy
       `).join('');
 
   const conteudo = document.createElement('div');
-  conteudo.style.cssText = 'font-family:Georgia,serif;max-width:800px;padding:40px;color:#2C2A27;background:#ffffff;';
+  conteudo.style.cssText = 'font-family:Arial,sans-serif;max-width:800px;padding:40px;color:#2C2A27;background:#ffffff;';
   conteudo.innerHTML = `
     <h1 style="font-size:24px;border-bottom:2px solid #5B7FA6;padding-bottom:8px;color:#5B7FA6;">Prontuario — ${pacienteAtual.nome}</h1>
     <div style="font-size:13px;color:#6B6760;margin-bottom:32px;">Exportado em ${agora}</div>
@@ -910,6 +1052,10 @@ async function carregarConfiguracoes() {
     const config = doc.data();
     configNomeClinica.value = config.nomeClinica || '';
     configNomeProfissional.value = config.nomeProfissional || '';
+    document.getElementById('config-nome-empresa').value = config.nomeEmpresa || '';
+    document.getElementById('config-cnpj').value = config.cnpj || '';
+    document.getElementById('config-telefone').value = config.telefoneClinica || '';
+    document.getElementById('config-endereco').value = config.enderecoClinica || '';
     aplicarConfiguracoes(config);
   }
 }
@@ -931,10 +1077,18 @@ function aplicarConfiguracoes(config) {
 btnSalvarConfig.addEventListener('click', async () => {
   const nomeClinica = configNomeClinica.value.trim();
   const nomeProfissional = configNomeProfissional.value.trim();
+  const nomeEmpresa = document.getElementById('config-nome-empresa').value.trim();
+  const cnpj = document.getElementById('config-cnpj').value.trim();
+  const telefoneClinica = document.getElementById('config-telefone').value.trim();
+  const enderecoClinica = document.getElementById('config-endereco').value.trim();
 
   await db.collection('configuracoes').doc(usuarioLogado.uid).set({
     nomeClinica,
     nomeProfissional,
+    nomeEmpresa,
+    cnpj,
+    telefoneClinica,
+    enderecoClinica,
     usuarioId: usuarioLogado.uid
   }, { merge: true });
 
@@ -1701,17 +1855,17 @@ function abrirModalAnotacao(anotacao = null) {
   anotacaoAtual = anotacao;
 
   if (anotacao) {
-    // Modo edição
     document.getElementById('anotacao-data').value = anotacao.data;
     document.getElementById('anotacao-evolucao').value = anotacao.evolucao;
+    document.getElementById('anotacao-modalidade').value = anotacao.modalidade || 'presencial';
     document.getElementById('anotacao-texto').value = anotacao.texto;
     document.querySelector('#modal-anotacao .modal-topo h2').textContent = 'Editar sessão';
     btnSalvarAnotacao.textContent = 'Atualizar sessão';
     btnSalvarAnotacao.dataset.modo = 'editar';
   } else {
-    // Modo novo
     document.getElementById('anotacao-data').value = formatarDataISO(new Date());
     document.getElementById('anotacao-evolucao').value = 'estavel';
+    document.getElementById('anotacao-modalidade').value = 'presencial';
     document.getElementById('anotacao-texto').value = '';
     document.querySelector('#modal-anotacao .modal-topo h2').textContent = 'Registro de sessão';
     btnSalvarAnotacao.textContent = 'Salvar sessão';
@@ -1734,11 +1888,63 @@ document.getElementById('btn-nova-anotacao').addEventListener('click', () => {
   abrirModalAnotacao();
 });
 
+/* Upload de anexos */
+const IMGBB_API_KEY = 'd97ba41e06022c45b1b95441f951c038';
+
+async function uploadAnexo(arquivo) {
+  const formData = new FormData();
+  formData.append('image', arquivo);
+
+  const response = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+    method: 'POST',
+    body: formData
+  });
+
+  const data = await response.json();
+  if (data.success) {
+    return {
+      url: data.data.url,
+      thumb: data.data.thumb.url,
+      nome: arquivo.name
+    };
+  }
+  return null;
+}
+
+document.getElementById('anotacao-anexo').addEventListener('change', (e) => {
+  const preview = document.getElementById('preview-anexos');
+  const arquivos = Array.from(e.target.files);
+
+  if (arquivos.length === 0) {
+    preview.innerHTML = '';
+    return;
+  }
+
+  preview.innerHTML = arquivos.map(arquivo => `
+    <div style="position:relative;">
+      <img src="${URL.createObjectURL(arquivo)}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--borda);" />
+      <div style="font-size:10px;color:var(--texto2);text-align:center;margin-top:2px;">${arquivo.name.length > 10 ? arquivo.name.substring(0, 10) + '...' : arquivo.name}</div>
+    </div>
+  `).join('');
+});
+
 // Salvar anotação
 btnSalvarAnotacao.addEventListener('click', async () => {
   const data = document.getElementById('anotacao-data').value;
   const evolucao = document.getElementById('anotacao-evolucao').value;
+  const modalidade = document.getElementById('anotacao-modalidade').value;
   const texto = document.getElementById('anotacao-texto').value.trim();
+  const inputAnexo = document.getElementById('anotacao-anexo');
+  const arquivos = Array.from(inputAnexo.files);
+  let anexos = anotacaoAtual?.anexos || [];
+
+  if (arquivos.length > 0) {
+    const preview = document.getElementById('preview-anexos');
+    preview.innerHTML = '<p style="font-size:12px;color:var(--texto2)">Enviando anexos...</p>';
+    const resultados = await Promise.all(arquivos.map(uploadAnexo));
+    const novosAnexos = resultados.filter(r => r !== null);
+    anexos = [...anexos, ...novosAnexos];
+  }
 
   if (!data || !texto) {
     document.getElementById('erro-anotacao').textContent = 'Data e anotação são obrigatórios.';
@@ -1746,14 +1952,16 @@ btnSalvarAnotacao.addEventListener('click', async () => {
   }
 
   if (btnSalvarAnotacao.dataset.modo === 'editar') {
-    await db.collection('anotacoes').doc(anotacaoAtual.id).update({ data, evolucao, texto });
+    await db.collection('anotacoes').doc(anotacaoAtual.id).update({ data, evolucao, modalidade, texto, anexos });
   } else {
     await db.collection('anotacoes').add({
       pacienteId: pacienteAtual.id,
       usuarioId: usuarioLogado.uid,
       data,
       evolucao,
-      texto
+      modalidade,
+      texto,
+      anexos
     });
   }
 
@@ -1783,18 +1991,39 @@ async function carregarAnotacoes(pacienteId) {
     negativa: 'Negativa'
   };
 
+  const modalidadeLabel = {
+    presencial: 'Presencial',
+    online: 'Online'
+  };
+
   lista.innerHTML = anotacoes.map(a => `
     <div class="sessao-card ${a.evolucao}" data-id="${a.id}">
       <div class="sessao-header">
         <div class="sessao-data">${new Date(a.data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</div>
-        <span class="sessao-evolucao ${a.evolucao}">${evolucaoLabel[a.evolucao]}</span>
+        <div style="display:flex; gap:8px; align-items:center;">
+          ${a.modalidade ? `<span class="badge ${a.modalidade === 'online' ? 'confirmada' : 'concluida'}">${modalidadeLabel[a.modalidade]}</span>` : ''}
+          <span class="sessao-evolucao ${a.evolucao}">${evolucaoLabel[a.evolucao]}</span>
+        </div>
       </div>
       <div class="sessao-texto">${a.texto}</div>
+      ${a.anexos && a.anexos.length > 0 ? `
+        <div style="margin-top:12px;">
+          <div style="font-size:11px;color:var(--texto2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Anexos</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            ${a.anexos.map(anexo => `
+              <a href="${anexo.url}" target="_blank">
+                <img src="${anexo.thumb}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--borda);cursor:pointer;" title="${anexo.nome}" />
+              </a>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
     </div>
   `).join('');
 
   lista.querySelectorAll('.sessao-card').forEach(card => {
-    card.addEventListener('click', async () => {
+    card.addEventListener('click', async (e) => {
+      if (e.target.tagName === 'IMG' || e.target.tagName === 'A') return;
       const id = card.dataset.id;
       const doc = await db.collection('anotacoes').doc(id).get();
       if (doc.exists) abrirModalAnotacao({ id: doc.id, ...doc.data() });

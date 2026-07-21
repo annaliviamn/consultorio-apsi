@@ -325,6 +325,11 @@
         </div>
         <label class="campo-label">Data da sessão</label>
         <input type="date" id="anotacao-data" />
+        <label class="campo-label">Modalidade da sessão</label>
+        <select id="anotacao-modalidade">
+          <option value="presencial">Presencial</option>
+          <option value="online">Online</option>
+        </select>
         <label class="campo-label">Evolução do paciente</label>
         <select id="anotacao-evolucao">
           <option value="positiva">Positiva</option>
@@ -334,6 +339,9 @@
         <label class="campo-label">Anotações da sessão</label>
         <textarea id="anotacao-texto" placeholder="Descreva o que aconteceu na sessão..." style="min-height: 200px"></textarea>
         <span id="erro-anotacao"></span>
+        <label class="campo-label">Anexos</label>
+        <input type="file" id="anotacao-anexo" accept="image/*" multiple />
+        <div id="preview-anexos" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
         <button id="btn-salvar-anotacao" class="btn-primario" data-modo="">Salvar sessão</button>
       </div>
     </div>
@@ -579,13 +587,19 @@
         <!-- Controle de Pagamentos -->
         <div class="perfil-secao" style="margin-top: 16px">Controle de pagamentos</div>
         <div class="barra-topo" style="margin-bottom: 12px">
-          <span></span>
-          <button class="btn-primario" id="btn-registrar-pagamento">+ Registrar pagamento</button>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <label class="campo-label" style="margin:0">Ano:</label>
+            <select id="filtro-ano-pagamento" class="config-input" style="width:100px;"></select>
+          </div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn-nav" id="btn-exportar-historico">Exportar histórico</button>
+            <button class="btn-primario" id="btn-registrar-pagamento">+ Registrar pagamento</button>
+          </div>
         </div>
+        <div id="resumo-pagamentos-anual" style="margin-bottom:12px;"></div>
         <div id="lista-pagamentos">
           <p class="vazio">Nenhum pagamento registrado ainda.</p>
         </div>
-
       </section>
 
       <!-- Tela: Prontuários -->
@@ -651,6 +665,34 @@
               <div class="config-desc">Aparece na saudação</div>
             </div>
             <input type="text" id="config-nome-profissional" class="config-input" placeholder="Ex: Dr. Ricardo" />
+          </div>
+          <div class="item-config">
+            <div>
+              <div class="config-nome">Nome completo da empresa</div>
+              <div class="config-desc">Aparece nos recibos de pagamento</div>
+            </div>
+            <input type="text" id="config-nome-empresa" class="config-input" placeholder="Ex: APSI Atendimento Psicológico LTDA" />
+          </div>
+          <div class="item-config">
+            <div>
+              <div class="config-nome">CNPJ</div>
+              <div class="config-desc">Aparece nos recibos de pagamento</div>
+            </div>
+            <input type="text" id="config-cnpj" class="config-input" placeholder="Ex: 00.000.000/0001-00" />
+          </div>
+          <div class="item-config">
+            <div>
+              <div class="config-nome">Telefone da clínica</div>
+              <div class="config-desc">Aparece nos recibos de pagamento</div>
+            </div>
+            <input type="text" id="config-telefone" class="config-input" placeholder="Ex: (61) 9999-9999" />
+          </div>
+          <div class="item-config">
+            <div>
+              <div class="config-nome">Endereço da clínica</div>
+              <div class="config-desc">Aparece nos recibos de pagamento</div>
+            </div>
+            <input type="text" id="config-endereco" class="config-input" placeholder="Ex: SCRN 716, Bloco D, Sala 201" />
           </div>
           <div class="item-config" style="justify-content: flex-end">
             <button class="btn-primario" id="btn-salvar-config">Salvar configurações</button>
