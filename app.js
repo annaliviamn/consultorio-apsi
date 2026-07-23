@@ -20,25 +20,6 @@ const btnCadastrar = document.getElementById('btn-cadastrar');
 let usuarioLogado = null;
 let tamanhoFonte = 15;
 
-/* Verifica sessão ao carregar */
-auth.onAuthStateChanged(async (user) => {
-  if (user) {
-    const docUsuario = await db.collection('usuarios').doc(user.uid).get();
-    if (docUsuario.exists) {
-      usuarioLogado = { uid: user.uid, ...docUsuario.data() };
-      atualizarSaudacao();
-      carregarPacientes();
-      carregarConfiguracoes();
-      await gerarConsultasTodosPacientes();
-      mostrarTela(app);
-      navegarPara('dashboard');
-      pedirPermissaoNotificacao();
-      verificarNotificacoes();
-      setInterval(verificarNotificacoes, 30 * 60 * 1000);
-    }
-  }
-});
-
 function mostrarTela(tela) {
     telaBoasVindas.classList.add('escondido');
     telaLogin.classList.add('escondido');
@@ -2415,3 +2396,22 @@ async function carregarDashboard() {
 
   renderConsultasHoje();
 }
+
+/* Verifica sessão ao carregar */
+auth.onAuthStateChanged(async (user) => {
+  if (user) {
+    const docUsuario = await db.collection('usuarios').doc(user.uid).get();
+    if (docUsuario.exists) {
+      usuarioLogado = { uid: user.uid, ...docUsuario.data() };
+      atualizarSaudacao();
+      carregarPacientes();
+      carregarConfiguracoes();
+      await gerarConsultasTodosPacientes();
+      mostrarTela(app);
+      navegarPara('dashboard');
+      pedirPermissaoNotificacao();
+      verificarNotificacoes();
+      setInterval(verificarNotificacoes, 30 * 60 * 1000);
+    }
+  }
+});
