@@ -1465,8 +1465,7 @@ async function carregarAgenda() {
 
   const horarios = [];
   for (let h = 7; h <= 20; h++) {
-    horarios.push(`${String(h).padStart(2, '0')}:00`);
-    horarios.push(`${String(h).padStart(2, '0')}:30`);
+      horarios.push(`${String(h).padStart(2, '0')}:00`);
   }
 
   const snapshotPacientes = await db.collection('pacientes')
