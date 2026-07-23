@@ -736,74 +736,104 @@ async function gerarRecibo(pagamento) {
   const dataEmissao = agora.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
   const numeroRecibo = `${pagamento.ano}${String(pagamento.mes).padStart(2, '0')}-${pagamento.id.substring(0, 6).toUpperCase()}`;
 
+  // Verifica se é menor de idade e tem responsável
+  let nomeRecibo = pacienteAtual.nome;
+  let cpfRecibo = pacienteAtual.cpf || null;
+  let ehResponsavel = false;
+
+  if (pacienteAtual.dataNascimento) {
+    const nascimento = new Date(pacienteAtual.dataNascimento + 'T12:00:00');
+    const hoje = new Date();
+    let idade = hoje.getFullYear() - nascimento.getFullYear();
+    const m = hoje.getMonth() - nascimento.getMonth();
+    if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) idade--;
+
+    if (idade < 18 && pacienteAtual.responsavelNome) {
+      nomeRecibo = pacienteAtual.responsavelNome;
+      cpfRecibo = pacienteAtual.responsavelCpf || null;
+      ehResponsavel = true;
+    }
+  }
+
   const conteudo = document.createElement('div');
   conteudo.style.cssText = 'font-family:Arial,sans-serif;max-width:800px;padding:40px;color:#2C2A27;background:#ffffff;';
   conteudo.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;border-bottom:2px solid #5B7FA6;padding-bottom:16px;">
+    <!-- Cabeçalho -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #5B7FA6;">
       <div style="display:flex;align-items:center;gap:16px;">
-        <img src="assets/logo.jpg" style="height:60px;width:auto;border-radius:8px;" />
+        <img src="assets/logo.jpg" style="height:64px;width:auto;border-radius:8px;" />
         <div>
-          <h1 style="font-size:18px;color:#5B7FA6;margin:0;font-weight:700;">${config.nomeEmpresa || config.nomeClinica || 'Consultório'}</h1>
+          <h1 style="font-size:17px;color:#5B7FA6;margin:0;font-weight:700;">${config.nomeEmpresa || config.nomeClinica || 'Consultório'}</h1>
           ${config.cnpj ? `<div style="font-size:11px;color:#6B6760;margin-top:2px;">CNPJ: ${config.cnpj}</div>` : ''}
           ${config.enderecoClinica ? `<div style="font-size:11px;color:#6B6760;">${config.enderecoClinica}</div>` : ''}
           ${config.telefoneClinica ? `<div style="font-size:11px;color:#6B6760;">Tel: ${config.telefoneClinica}</div>` : ''}
         </div>
       </div>
       <div style="text-align:right;">
-        <div style="font-size:11px;color:#6B6760;text-transform:uppercase;letter-spacing:1px;">Recibo de Pagamento</div>
-        <div style="font-size:13px;font-weight:700;color:#2C2A27;margin-top:4px;">Nº ${numeroRecibo}</div>
+        <div style="font-size:10px;color:#6B6760;text-transform:uppercase;letter-spacing:1.5px;">Recibo de Pagamento</div>
+        <div style="font-size:20px;font-weight:700;color:#5B7FA6;margin-top:2px;">Nº ${numeroRecibo}</div>
         <div style="font-size:11px;color:#6B6760;margin-top:2px;">Emitido em ${dataEmissao}</div>
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px;">
+    <!-- Dados -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
       <div style="background:#F7F5F2;border-radius:8px;padding:16px;">
-        <div style="font-size:11px;color:#6B6760;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Paciente</div>
-        <div style="font-size:15px;font-weight:600;">${pacienteAtual.nome}</div>
-        ${pacienteAtual.cpf ? `<div style="font-size:12px;color:#6B6760;margin-top:4px;">CPF: ${pacienteAtual.cpf}</div>` : ''}
-        ${pacienteAtual.telefone ? `<div style="font-size:12px;color:#6B6760;">Tel: ${pacienteAtual.telefone}</div>` : ''}
+        <div style="font-size:10px;color:#6B6760;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">
+          ${ehResponsavel ? 'Responsável pelo paciente' : 'Paciente'}
+        </div>
+        <div style="font-size:15px;font-weight:700;color:#2C2A27;">${nomeRecibo}</div>
+        ${cpfRecibo ? `<div style="font-size:12px;color:#6B6760;margin-top:4px;">CPF: ${cpfRecibo}</div>` : ''}
+        ${ehResponsavel ? `<div style="font-size:12px;color:#6B6760;margin-top:4px;">Paciente: ${pacienteAtual.nome}</div>` : ''}
+        ${!ehResponsavel && pacienteAtual.telefone ? `<div style="font-size:12px;color:#6B6760;margin-top:4px;">Tel: ${pacienteAtual.telefone}</div>` : ''}
       </div>
       <div style="background:#F7F5F2;border-radius:8px;padding:16px;">
-        <div style="font-size:11px;color:#6B6760;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Referência</div>
-        <div style="font-size:15px;font-weight:600;">${meses[pagamento.mes]} de ${pagamento.ano}</div>
+        <div style="font-size:10px;color:#6B6760;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Referência</div>
+        <div style="font-size:15px;font-weight:700;color:#2C2A27;">${meses[pagamento.mes]} de ${pagamento.ano}</div>
         <div style="font-size:12px;color:#6B6760;margin-top:4px;">Sessões de Psicologia</div>
-        ${pagamento.dataPagamento ? `<div style="font-size:12px;color:#6B6760;">Pago em: ${new Date(pagamento.dataPagamento + 'T12:00:00').toLocaleDateString('pt-BR')}</div>` : ''}
+        ${pagamento.dataPagamento ? `<div style="font-size:12px;color:#6B6760;margin-top:4px;">Pago em: ${new Date(pagamento.dataPagamento + 'T12:00:00').toLocaleDateString('pt-BR')}</div>` : ''}
+        <div style="font-size:12px;color:#6B6760;margin-top:4px;">Forma: ${pacienteAtual.formaPagamento || 'Não informado'}</div>
       </div>
     </div>
 
-    <div style="background:#5B7FA6;border-radius:8px;padding:20px;margin-bottom:32px;display:flex;justify-content:space-between;align-items:center;">
+    <!-- Valor -->
+    <div style="background:linear-gradient(135deg,#5B7FA6,#4a6d94);border-radius:12px;padding:24px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;">
       <div>
-        <div style="font-size:12px;color:#ffffff;opacity:0.8;">Valor recebido</div>
-        <div style="font-size:28px;font-weight:700;color:#ffffff;">R$ ${Number(pagamento.valor || 0).toFixed(2)}</div>
+        <div style="font-size:11px;color:#ffffff;opacity:0.8;text-transform:uppercase;letter-spacing:1px;">Valor recebido</div>
+        <div style="font-size:36px;font-weight:700;color:#ffffff;margin-top:4px;">R$ ${Number(pagamento.valor || 0).toFixed(2)}</div>
       </div>
-      <div style="text-align:right;">
-        <div style="font-size:12px;color:#ffffff;opacity:0.8;">Forma de pagamento</div>
-        <div style="font-size:14px;font-weight:600;color:#ffffff;">${pacienteAtual.formaPagamento || 'Não informado'}</div>
+      <div style="background:rgba(255,255,255,0.15);border-radius:8px;padding:12px 20px;text-align:center;">
+        <div style="font-size:10px;color:#ffffff;opacity:0.8;text-transform:uppercase;letter-spacing:1px;">Status</div>
+        <div style="font-size:14px;font-weight:700;color:#ffffff;margin-top:4px;">Pago</div>
       </div>
     </div>
 
-    <div style="border:1px dashed #D8D4CE;border-radius:8px;padding:16px;margin-bottom:32px;">
-      <p style="font-size:12px;color:#6B6760;margin:0;line-height:1.6;">
-        Declaro que recebi a importância de <strong>R$ ${Number(pagamento.valor || 0).toFixed(2)}</strong> 
-        referente às sessões de psicologia do mês de <strong>${meses[pagamento.mes]} de ${pagamento.ano}</strong>, 
-        prestadas a <strong>${pacienteAtual.nome}</strong>.
+    <!-- Declaração -->
+    <div style="border:1px dashed #D8D4CE;border-radius:8px;padding:16px;margin-bottom:40px;background:#FDFCFB;">
+      <p style="font-size:12px;color:#6B6760;margin:0;line-height:1.8;">
+        Declaro que recebi de <strong style="color:#2C2A27;">${nomeRecibo}</strong>${cpfRecibo ? `, CPF ${cpfRecibo},` : ''} 
+        a importância de <strong style="color:#2C2A27;">R$ ${Number(pagamento.valor || 0).toFixed(2)}</strong> 
+        referente às sessões de psicologia do mês de <strong style="color:#2C2A27;">${meses[pagamento.mes]} de ${pagamento.ano}</strong>
+        ${ehResponsavel ? `, prestadas ao(à) paciente <strong style="color:#2C2A27;">${pacienteAtual.nome}</strong>` : ''}.
+        Para maior clareza, firmo o presente recibo.
       </p>
     </div>
 
-    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:48px;">
+    <!-- Assinatura -->
+    <div style="display:flex;justify-content:center;margin-top:16px;">
       <div style="text-align:center;">
-        <div style="border-top:1px solid #2C2A27;padding-top:8px;width:250px;">
-          <div style="font-size:12px;color:#2C2A27;">${config.nomeProfissional || config.nomeClinica || ''}</div>
+        <div style="border-top:1px solid #2C2A27;padding-top:10px;width:280px;">
+          <div style="font-size:13px;font-weight:600;color:#2C2A27;">${config.nomeProfissional || ''}</div>
+          ${config.crp ? `<div style="font-size:11px;color:#6B6760;margin-top:2px;">${config.crp}</div>` : ''}
           ${config.cnpj ? `<div style="font-size:11px;color:#6B6760;">CNPJ: ${config.cnpj}</div>` : ''}
         </div>
-      </div>
-      <div style="font-size:11px;color:#6B6760;text-align:right;">
-        Brasília, ${dataEmissao}
+        <div style="font-size:11px;color:#6B6760;margin-top:12px;">Brasília, ${dataEmissao}</div>
       </div>
     </div>
 
-    <div style="font-size:10px;color:#6B6760;text-align:center;border-top:1px solid #D8D4CE;padding-top:16px;margin-top:32px;">
-      Documento gerado pelo sistema APSI · ${config.nomeEmpresa || config.nomeClinica || ''}
+    <!-- Rodapé -->
+    <div style="font-size:10px;color:#9C9890;text-align:center;border-top:1px solid #EDEAE5;padding-top:16px;margin-top:32px;">
+      Documento gerado pelo sistema APSI · ${config.nomeEmpresa || config.nomeClinica || ''} · ${config.cnpj || ''}
     </div>
   `;
 
@@ -818,7 +848,7 @@ async function gerarRecibo(pagamento) {
   const altura = (canvas.height * largura) / canvas.width;
 
   pdf.addImage(imgData, 'PNG', 0, 0, largura, altura);
-  pdf.save(`recibo-${pacienteAtual.nome.toLowerCase().replace(/\s+/g, '-')}-${meses[pagamento.mes].toLowerCase()}-${pagamento.ano}.pdf`);
+  pdf.save(`recibo-${nomeRecibo.toLowerCase().replace(/\s+/g, '-')}-${meses[pagamento.mes].toLowerCase()}-${pagamento.ano}.pdf`);
 
   document.body.removeChild(conteudo);
 }
@@ -1162,6 +1192,7 @@ async function carregarConfiguracoes() {
     configNomeClinica.value = config.nomeClinica || '';
     configNomeProfissional.value = config.nomeProfissional || '';
     document.getElementById('config-nome-empresa').value = config.nomeEmpresa || '';
+    document.getElementById('config-crp').value = config.crp || '';
     document.getElementById('config-cnpj').value = config.cnpj || '';
     document.getElementById('config-telefone').value = config.telefoneClinica || '';
     document.getElementById('config-endereco').value = config.enderecoClinica || '';
@@ -1187,6 +1218,7 @@ btnSalvarConfig.addEventListener('click', async () => {
   const nomeClinica = configNomeClinica.value.trim();
   const nomeProfissional = configNomeProfissional.value.trim();
   const nomeEmpresa = document.getElementById('config-nome-empresa').value.trim();
+  const crp = document.getElementById('config-crp').value.trim();
   const cnpj = document.getElementById('config-cnpj').value.trim();
   const telefoneClinica = document.getElementById('config-telefone').value.trim();
   const enderecoClinica = document.getElementById('config-endereco').value.trim();
@@ -1196,6 +1228,7 @@ btnSalvarConfig.addEventListener('click', async () => {
     nomeProfissional,
     nomeEmpresa,
     cnpj,
+    crp,
     telefoneClinica,
     enderecoClinica,
     usuarioId: usuarioLogado.uid
@@ -2396,22 +2429,3 @@ async function carregarDashboard() {
 
   renderConsultasHoje();
 }
-
-/* Verifica sessão ao carregar */
-auth.onAuthStateChanged(async (user) => {
-  if (user) {
-    const docUsuario = await db.collection('usuarios').doc(user.uid).get();
-    if (docUsuario.exists) {
-      usuarioLogado = { uid: user.uid, ...docUsuario.data() };
-      atualizarSaudacao();
-      carregarPacientes();
-      carregarConfiguracoes();
-      await gerarConsultasTodosPacientes();
-      mostrarTela(app);
-      navegarPara('dashboard');
-      pedirPermissaoNotificacao();
-      verificarNotificacoes();
-      setInterval(verificarNotificacoes, 30 * 60 * 1000);
-    }
-  }
-});
