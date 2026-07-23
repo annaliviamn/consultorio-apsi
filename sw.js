@@ -7,8 +7,8 @@ const urlsParaCachear = [
   '/consultorio-apsi/firebase-config.js',
   '/consultorio-apsi/manifest.json',
   '/consultorio-apsi/assets/logo.jpg',
-  '/consultorio-apsi/assets/icons/icon-192.jpg',
-  '/consultorio-apsi/assets/icons/icon-512.jpg'
+  '/consultorio-apsi/assets/icons/icon-192.png',
+  '/consultorio-apsi/assets/icons/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {
