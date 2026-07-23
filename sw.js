@@ -1,14 +1,14 @@
 const CACHE_NAME = 'consultorio-apsi-v2';
 const urlsParaCachear = [
-  '/',
-  '/index.html',
-  '/style.css',
-  '/app.js',
-  '/firebase-config.js',
-  '/manifest.json',
-  '/assets/logo.jpg',
-  '/assets/icons/icon-192.jpg',
-  '/assets/icons/icon-512.jpg'
+  '/consultorio-apsi/',
+  '/consultorio-apsi/index.html',
+  '/consultorio-apsi/style.css',
+  '/consultorio-apsi/app.js',
+  '/consultorio-apsi/firebase-config.js',
+  '/consultorio-apsi/manifest.json',
+  '/consultorio-apsi/assets/logo.jpg',
+  '/consultorio-apsi/assets/icons/icon-192.jpg',
+  '/consultorio-apsi/assets/icons/icon-512.jpg'
 ];
 
 self.addEventListener('install', (event) => {
