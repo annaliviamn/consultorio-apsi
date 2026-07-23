@@ -20,7 +20,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
+        navigator.serviceWorker.register('./sw.js')
           .then(() => console.log('Service Worker registrado!'))
           .catch((err) => console.log('Erro no Service Worker:', err));
       });
@@ -665,6 +665,13 @@
               <div class="config-desc">Aparece na saudação</div>
             </div>
             <input type="text" id="config-nome-profissional" class="config-input" placeholder="Ex: Dr. Ricardo" />
+          </div>
+          <div class="item-config">
+            <div>
+              <div class="config-nome">CRP</div>
+              <div class="config-desc">Número do conselho regional de psicologia</div>
+            </div>
+            <input type="text" id="config-crp" class="config-input" placeholder="Ex: CRP 01/12345" />
           </div>
           <div class="item-config">
             <div>

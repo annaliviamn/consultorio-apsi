@@ -20,6 +20,25 @@ const btnCadastrar = document.getElementById('btn-cadastrar');
 let usuarioLogado = null;
 let tamanhoFonte = 15;
 
+/* Verifica sessão ao carregar */
+auth.onAuthStateChanged(async (user) => {
+  if (user) {
+    const docUsuario = await db.collection('usuarios').doc(user.uid).get();
+    if (docUsuario.exists) {
+      usuarioLogado = { uid: user.uid, ...docUsuario.data() };
+      atualizarSaudacao();
+      carregarPacientes();
+      carregarConfiguracoes();
+      await gerarConsultasTodosPacientes();
+      mostrarTela(app);
+      navegarPara('dashboard');
+      pedirPermissaoNotificacao();
+      verificarNotificacoes();
+      setInterval(verificarNotificacoes, 30 * 60 * 1000);
+    }
+  }
+});
+
 function mostrarTela(tela) {
     telaBoasVindas.classList.add('escondido');
     telaLogin.classList.add('escondido');
@@ -206,7 +225,6 @@ btnEntrar.addEventListener('click', async () => {
         return;
     }
 
-    // Credenciais admin — preencha aqui
     const ADMIN_EMAIL = 'annaliviamaciel@gmail.com';
     const ADMIN_SENHA = 'kanna0110';
 
@@ -216,6 +234,7 @@ btnEntrar.addEventListener('click', async () => {
     }
 
     try {
+        await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
         const credencial = await auth.signInWithEmailAndPassword(email, senha);
         const uid = credencial.user.uid;
 
@@ -694,6 +713,7 @@ async function carregarPagamentos(pacienteId) {
           <button class="pagamento-status ${status}" data-id="${p.id}" data-status="${p.status}">
             ${status === 'pago' ? 'Pago' : status === 'atrasado' ? 'Atrasado' : 'Pendente'}
           </button>
+          ${p.status === 'pago' ? `<button class="btn-nav btn-recibo" data-id="${p.id}" style="font-size:12px;padding:4px 10px;">Recibo</button>` : ''}
         </div>
       `;
     }).join('');
@@ -708,10 +728,118 @@ async function carregarPagamentos(pacienteId) {
         carregarPagamentos(pacienteAtual.id);
       });
     });
+
+    document.querySelectorAll('.btn-recibo').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        const snap = await db.collection('pagamentos').doc(id).get();
+        const pagamento = { id: snap.id, ...snap.data() };
+        gerarRecibo(pagamento);
+      });
+    });
   }
 
   selectAno.onchange = renderPagamentos;
   renderPagamentos();
+}
+
+async function gerarRecibo(pagamento) {
+  const docConfig = await db.collection('configuracoes').doc(usuarioLogado.uid).get();
+  const config = docConfig.exists ? docConfig.data() : {};
+
+  const meses = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+  const agora = new Date();
+  const dataEmissao = agora.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+  const numeroRecibo = `${pagamento.ano}${String(pagamento.mes).padStart(2, '0')}-${pagamento.id.substring(0, 6).toUpperCase()}`;
+
+  const conteudo = document.createElement('div');
+  conteudo.style.cssText = 'font-family:Arial,sans-serif;max-width:800px;padding:40px;color:#2C2A27;background:#ffffff;';
+  conteudo.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;border-bottom:2px solid #5B7FA6;padding-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <img src="assets/logo.jpg" style="height:60px;width:auto;border-radius:8px;" />
+        <div>
+          <h1 style="font-size:18px;color:#5B7FA6;margin:0;font-weight:700;">${config.nomeEmpresa || config.nomeClinica || 'Consultório'}</h1>
+          ${config.cnpj ? `<div style="font-size:11px;color:#6B6760;margin-top:2px;">CNPJ: ${config.cnpj}</div>` : ''}
+          ${config.enderecoClinica ? `<div style="font-size:11px;color:#6B6760;">${config.enderecoClinica}</div>` : ''}
+          ${config.telefoneClinica ? `<div style="font-size:11px;color:#6B6760;">Tel: ${config.telefoneClinica}</div>` : ''}
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:11px;color:#6B6760;text-transform:uppercase;letter-spacing:1px;">Recibo de Pagamento</div>
+        <div style="font-size:13px;font-weight:700;color:#2C2A27;margin-top:4px;">Nº ${numeroRecibo}</div>
+        <div style="font-size:11px;color:#6B6760;margin-top:2px;">Emitido em ${dataEmissao}</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px;">
+      <div style="background:#F7F5F2;border-radius:8px;padding:16px;">
+        <div style="font-size:11px;color:#6B6760;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Paciente</div>
+        <div style="font-size:15px;font-weight:600;">${pacienteAtual.nome}</div>
+        ${pacienteAtual.cpf ? `<div style="font-size:12px;color:#6B6760;margin-top:4px;">CPF: ${pacienteAtual.cpf}</div>` : ''}
+        ${pacienteAtual.telefone ? `<div style="font-size:12px;color:#6B6760;">Tel: ${pacienteAtual.telefone}</div>` : ''}
+      </div>
+      <div style="background:#F7F5F2;border-radius:8px;padding:16px;">
+        <div style="font-size:11px;color:#6B6760;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Referência</div>
+        <div style="font-size:15px;font-weight:600;">${meses[pagamento.mes]} de ${pagamento.ano}</div>
+        <div style="font-size:12px;color:#6B6760;margin-top:4px;">Sessões de Psicologia</div>
+        ${pagamento.dataPagamento ? `<div style="font-size:12px;color:#6B6760;">Pago em: ${new Date(pagamento.dataPagamento + 'T12:00:00').toLocaleDateString('pt-BR')}</div>` : ''}
+      </div>
+    </div>
+
+    <div style="background:#5B7FA6;border-radius:8px;padding:20px;margin-bottom:32px;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:12px;color:#ffffff;opacity:0.8;">Valor recebido</div>
+        <div style="font-size:28px;font-weight:700;color:#ffffff;">R$ ${Number(pagamento.valor || 0).toFixed(2)}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:12px;color:#ffffff;opacity:0.8;">Forma de pagamento</div>
+        <div style="font-size:14px;font-weight:600;color:#ffffff;">${pacienteAtual.formaPagamento || 'Não informado'}</div>
+      </div>
+    </div>
+
+    <div style="border:1px dashed #D8D4CE;border-radius:8px;padding:16px;margin-bottom:32px;">
+      <p style="font-size:12px;color:#6B6760;margin:0;line-height:1.6;">
+        Declaro que recebi a importância de <strong>R$ ${Number(pagamento.valor || 0).toFixed(2)}</strong> 
+        referente às sessões de psicologia do mês de <strong>${meses[pagamento.mes]} de ${pagamento.ano}</strong>, 
+        prestadas a <strong>${pacienteAtual.nome}</strong>.
+      </p>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:48px;">
+      <div style="text-align:center;">
+        <div style="border-top:1px solid #2C2A27;padding-top:8px;width:250px;">
+          <div style="font-size:12px;color:#2C2A27;">${config.nomeProfissional || config.nomeClinica || ''}</div>
+          ${config.cnpj ? `<div style="font-size:11px;color:#6B6760;">CNPJ: ${config.cnpj}</div>` : ''}
+        </div>
+      </div>
+      <div style="font-size:11px;color:#6B6760;text-align:right;">
+        Brasília, ${dataEmissao}
+      </div>
+    </div>
+
+    <div style="font-size:10px;color:#6B6760;text-align:center;border-top:1px solid #D8D4CE;padding-top:16px;margin-top:32px;">
+      Documento gerado pelo sistema APSI · ${config.nomeEmpresa || config.nomeClinica || ''}
+    </div>
+  `;
+
+  document.body.appendChild(conteudo);
+
+  const canvas = await html2canvas(conteudo, { scale: 2, useCORS: true });
+  const imgData = canvas.toDataURL('image/png');
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const largura = pdf.internal.pageSize.getWidth();
+  const altura = (canvas.height * largura) / canvas.width;
+
+  pdf.addImage(imgData, 'PNG', 0, 0, largura, altura);
+  pdf.save(`recibo-${pacienteAtual.nome.toLowerCase().replace(/\s+/g, '-')}-${meses[pagamento.mes].toLowerCase()}-${pagamento.ano}.pdf`);
+
+  document.body.removeChild(conteudo);
 }
 
 /* Exportar histórico de pagamentos */
