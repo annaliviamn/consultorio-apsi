@@ -1997,6 +1997,7 @@ function abrirModalAnotacao(anotacao = null) {
 
   if (anotacao) {
     document.getElementById('anotacao-data').value = anotacao.data;
+    document.getElementById('anotacao-hora').value = anotacao.hora || '';
     document.getElementById('anotacao-evolucao').value = anotacao.evolucao;
     document.getElementById('anotacao-modalidade').value = anotacao.modalidade || 'presencial';
     document.getElementById('anotacao-texto').value = anotacao.texto;
@@ -2005,6 +2006,7 @@ function abrirModalAnotacao(anotacao = null) {
     btnSalvarAnotacao.dataset.modo = 'editar';
   } else {
     document.getElementById('anotacao-data').value = formatarDataISO(new Date());
+    document.getElementById('anotacao-hora').value = pacienteAtual?.horarioFixo || '';
     document.getElementById('anotacao-evolucao').value = 'estavel';
     document.getElementById('anotacao-modalidade').value = 'presencial';
     document.getElementById('anotacao-texto').value = '';
@@ -2072,6 +2074,7 @@ document.getElementById('anotacao-anexo').addEventListener('change', (e) => {
 // Salvar anotação
 btnSalvarAnotacao.addEventListener('click', async () => {
   const data = document.getElementById('anotacao-data').value;
+  const hora = document.getElementById('anotacao-hora').value;
   const evolucao = document.getElementById('anotacao-evolucao').value;
   const modalidade = document.getElementById('anotacao-modalidade').value;
   const texto = document.getElementById('anotacao-texto').value.trim();
@@ -2093,12 +2096,13 @@ btnSalvarAnotacao.addEventListener('click', async () => {
   }
 
   if (btnSalvarAnotacao.dataset.modo === 'editar') {
-    await db.collection('anotacoes').doc(anotacaoAtual.id).update({ data, evolucao, modalidade, texto, anexos });
+    await db.collection('anotacoes').doc(anotacaoAtual.id).update({ data, hora, evolucao, modalidade, texto, anexos });
   } else {
     await db.collection('anotacoes').add({
       pacienteId: pacienteAtual.id,
       usuarioId: usuarioLogado.uid,
       data,
+      hora,
       evolucao,
       modalidade,
       texto,
@@ -2119,7 +2123,11 @@ async function carregarAnotacoes(pacienteId) {
     .get();
 
   const anotacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  anotacoes.sort((a, b) => b.data.localeCompare(a.data));
+  anotacoes.sort((a, b) => {
+    if (a.data !== b.data) return b.data.localeCompare(a.data);
+    if (a.hora && b.hora) return b.hora.localeCompare(a.hora);
+    return 0;
+  });
 
   if (anotacoes.length === 0) {
     lista.innerHTML = '<p class="vazio">Nenhuma sessão registrada ainda.</p>';
@@ -2140,10 +2148,13 @@ async function carregarAnotacoes(pacienteId) {
   lista.innerHTML = anotacoes.map(a => `
     <div class="sessao-card ${a.evolucao}" data-id="${a.id}">
       <div class="sessao-header">
-        <div class="sessao-data">${new Date(a.data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</div>
+        <div>
+          <div class="sessao-data">${new Date(a.data + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}${a.hora ? ` às ${a.hora}` : ''}</div>
+        </div>
         <div style="display:flex; gap:8px; align-items:center;">
           ${a.modalidade ? `<span class="badge ${a.modalidade === 'online' ? 'confirmada' : 'concluida'}">${modalidadeLabel[a.modalidade]}</span>` : ''}
           <span class="sessao-evolucao ${a.evolucao}">${evolucaoLabel[a.evolucao]}</span>
+          <button class="btn-nav btn-exportar-sessao" data-id="${a.id}" style="font-size:11px;padding:3px 8px;" title="Exportar esta sessão">↓ PDF</button>
         </div>
       </div>
       <div class="sessao-texto">${a.texto}</div>
@@ -2164,12 +2175,118 @@ async function carregarAnotacoes(pacienteId) {
 
   lista.querySelectorAll('.sessao-card').forEach(card => {
     card.addEventListener('click', async (e) => {
-      if (e.target.tagName === 'IMG' || e.target.tagName === 'A') return;
+      if (e.target.tagName === 'IMG' || e.target.tagName === 'A' || e.target.classList.contains('btn-exportar-sessao')) return;
       const id = card.dataset.id;
       const doc = await db.collection('anotacoes').doc(id).get();
       if (doc.exists) abrirModalAnotacao({ id: doc.id, ...doc.data() });
     });
   });
+
+  lista.querySelectorAll('.btn-exportar-sessao').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = btn.dataset.id;
+      const doc = await db.collection('anotacoes').doc(id).get();
+      if (doc.exists) exportarSessaoIndividual({ id: doc.id, ...doc.data() });
+    });
+  });
+}
+
+async function exportarSessaoIndividual(anotacao) {
+  const evolucaoLabel = { positiva: 'Positiva', estavel: 'Estável', negativa: 'Negativa' };
+  const modalidadeLabel = { presencial: 'Presencial', online: 'Online' };
+
+  const agora = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+  const dataFormatada = new Date(anotacao.data + 'T12:00:00').toLocaleDateString('pt-BR', {
+    weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
+  });
+
+  const docConfig = await db.collection('configuracoes').doc(usuarioLogado.uid).get();
+  const config = docConfig.exists ? docConfig.data() : {};
+
+  const conteudo = document.createElement('div');
+  conteudo.style.cssText = 'font-family:Arial,sans-serif;max-width:800px;padding:40px;color:#2C2A27;background:#ffffff;';
+  conteudo.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #5B7FA6;">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <img src="assets/logo.jpg" style="height:56px;width:auto;border-radius:8px;" />
+        <div>
+          <h1 style="font-size:16px;color:#5B7FA6;margin:0;font-weight:700;">${config.nomeEmpresa || config.nomeClinica || 'Consultório'}</h1>
+          ${config.cnpj ? `<div style="font-size:11px;color:#6B6760;">CNPJ: ${config.cnpj}</div>` : ''}
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:10px;color:#6B6760;text-transform:uppercase;letter-spacing:1px;">Registro de Sessão</div>
+        <div style="font-size:11px;color:#6B6760;margin-top:4px;">Emitido em ${agora}</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+      <div style="background:#F7F5F2;border-radius:8px;padding:14px;">
+        <div style="font-size:10px;color:#6B6760;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Paciente</div>
+        <div style="font-size:15px;font-weight:700;">${pacienteAtual.nome}</div>
+        ${pacienteAtual.cpf ? `<div style="font-size:12px;color:#6B6760;margin-top:2px;">CPF: ${pacienteAtual.cpf}</div>` : ''}
+      </div>
+      <div style="background:#F7F5F2;border-radius:8px;padding:14px;">
+        <div style="font-size:10px;color:#6B6760;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Data da sessão</div>
+        <div style="font-size:14px;font-weight:600;">${dataFormatada}</div>
+        ${anotacao.hora ? `<div style="font-size:13px;color:#5B7FA6;margin-top:2px;">às ${anotacao.hora}</div>` : ''}
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;margin-bottom:24px;">
+      ${anotacao.modalidade ? `
+        <div style="background:#F7F5F2;border-radius:8px;padding:12px 16px;">
+          <div style="font-size:10px;color:#6B6760;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Modalidade</div>
+          <div style="font-size:13px;font-weight:600;">${modalidadeLabel[anotacao.modalidade] || anotacao.modalidade}</div>
+        </div>
+      ` : ''}
+      ${anotacao.evolucao ? `
+        <div style="background:#F7F5F2;border-radius:8px;padding:12px 16px;">
+          <div style="font-size:10px;color:#6B6760;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Evolução</div>
+          <div style="font-size:13px;font-weight:600;">${evolucaoLabel[anotacao.evolucao] || anotacao.evolucao}</div>
+        </div>
+      ` : ''}
+      <div style="background:#F7F5F2;border-radius:8px;padding:12px 16px;">
+        <div style="font-size:10px;color:#6B6760;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Profissional</div>
+        <div style="font-size:13px;font-weight:600;">${config.nomeProfissional || '—'}</div>
+        ${config.crp ? `<div style="font-size:11px;color:#6B6760;">${config.crp}</div>` : ''}
+      </div>
+    </div>
+
+    <div style="margin-bottom:24px;">
+      <div style="font-size:10px;color:#6B6760;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Anotações da sessão</div>
+      <div style="font-size:13px;line-height:1.8;color:#2C2A27;background:#FDFCFB;border:1px solid #EDEAE5;border-radius:8px;padding:16px;">${anotacao.texto}</div>
+    </div>
+
+    ${anotacao.anexos && anotacao.anexos.length > 0 ? `
+      <div style="margin-bottom:24px;">
+        <div style="font-size:10px;color:#6B6760;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Anexos</div>
+        <div style="font-size:12px;color:#6B6760;">
+          ${anotacao.anexos.map((a, i) => `<div>${i + 1}. ${a.nome} — ${a.url}</div>`).join('')}
+        </div>
+      </div>
+    ` : ''}
+
+    <div style="font-size:10px;color:#9C9890;text-align:center;border-top:1px solid #EDEAE5;padding-top:16px;margin-top:32px;">
+      Documento gerado pelo sistema APSI · ${config.nomeEmpresa || config.nomeClinica || ''} · ${agora}
+    </div>
+  `;
+
+  document.body.appendChild(conteudo);
+
+  const canvas = await html2canvas(conteudo, { scale: 2, useCORS: true });
+  const imgData = canvas.toDataURL('image/png');
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const largura = pdf.internal.pageSize.getWidth();
+  const altura = (canvas.height * largura) / canvas.width;
+
+  pdf.addImage(imgData, 'PNG', 0, 0, largura, altura);
+  pdf.save(`sessao-${pacienteAtual.nome.toLowerCase().replace(/\s+/g, '-')}-${anotacao.data}.pdf`);
+
+  document.body.removeChild(conteudo);
 }
 
 /* Dashboard */
@@ -2207,9 +2324,21 @@ async function carregarDashboard() {
 
   const horaAgora = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
 
-  // Conclui automaticamente consultas confirmadas cujo horário já passou
+  // Conclui automaticamente apenas consultas que já têm anotação registrada no dia
+  const snapshotAnotacoes = await db.collection('anotacoes')
+    .where('usuarioId', '==', usuarioLogado.uid)
+    .get();
+
+  const anotacoesHoje = snapshotAnotacoes.docs
+    .map(doc => doc.data())
+    .filter(a => a.data === hoje);
+
+  const pacientesComAnotacaoHoje = new Set(anotacoesHoje.map(a => a.pacienteId));
+
   const consultasParaConcluir = consultasHoje.filter(c =>
-    c.status === 'confirmada' && c.hora < horaAgora
+    c.status === 'confirmada' &&
+    c.hora < horaAgora &&
+    pacientesComAnotacaoHoje.has(c.pacienteId)
   );
 
   for (const c of consultasParaConcluir) {
