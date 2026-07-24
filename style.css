@@ -385,9 +385,46 @@ body {
     opacity: 0.9;
 }
 
+.btn-primario svg {
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.busca-container svg {
+  top: 38%;
+}
+
+.btn-primario svg,
+.btn-nav svg,
+.btn-excluir-perfil svg {
+  vertical-align: middle;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+.btn-primario,
+.btn-nav,
+.btn-excluir-perfil {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-primario,
+.btn-secundario {
+  justify-content: center;
+}
+
+.btn-primario svg,
+.btn-secundario svg {
+  vertical-align: -3px;
+  position: relative;
+  top: -1.5px;
+}
+
 .campo-busca {
     width: 100%;
-    padding: 11px 16px;
+    padding: 10px 16px 10px 36px;
     border: 1px solid var(--borda);
     border-radius: var(--raio);
     background: var(--card);
