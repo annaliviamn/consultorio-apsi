@@ -1,4 +1,4 @@
-const CACHE_NAME = 'consultorio-apsi-v3';
+const CACHE_NAME = 'consultorio-apsi-v4';
 const urlsParaCachear = [
   '/consultorio-apsi/',
   '/consultorio-apsi/index.html',
