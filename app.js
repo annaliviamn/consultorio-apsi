@@ -189,12 +189,12 @@ function inicializar() {
   
   if (temaSalvo === 'escuro') {
     document.body.classList.add('escuro');
-    if (btnTema) btnTema.innerHTML = iconeClaro;
-    if (btnTemaConfig) btnTemaConfig.innerHTML = iconeClaro;
-  } else {
-    document.body.classList.remove('escuro');
     if (btnTema) btnTema.innerHTML = iconeEscuro;
     if (btnTemaConfig) btnTemaConfig.innerHTML = iconeEscuro;
+  } else {
+    document.body.classList.remove('escuro');
+    if (btnTema) btnTema.innerHTML = iconeClaro;
+    if (btnTemaConfig) btnTemaConfig.innerHTML = iconeClaro;
   }
 
   const fonteSalva = localStorage.getItem('consultorio_fonte');
