@@ -1,5 +1,4 @@
 /* Variáveis Globais */
-
 const telaLogin = document.getElementById('tela-login');
 const app = document.getElementById('app');
 const inputSenha = document.getElementById('input-senha');
@@ -16,6 +15,43 @@ const btnIrCadastro = document.getElementById('btn-ir-cadastro');
 const linkIrCadastro = document.getElementById('link-ir-cadastro');
 const linkVoltarLogin = document.getElementById('link-voltar-login');
 const btnCadastrar = document.getElementById('btn-cadastrar');
+
+/* Máscaras de Input */
+function mascaraTelefone(valor) {
+  valor = valor.replace(/\D/g, '');
+  if (valor.length <= 10) {
+    valor = valor.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+  } else {
+    valor = valor.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+  }
+  return valor;
+}
+
+function mascaraCPF(valor) {
+  valor = valor.replace(/\D/g, '');
+  valor = valor.replace(/(\d{3})(\d{3})(\d{3})(\d{0,2})/, '$1.$2.$3-$4');
+  return valor;
+}
+
+function mascaraCNPJ(valor) {
+  valor = valor.replace(/\D/g, '');
+  valor = valor.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/, '$1.$2.$3/$4-$5');
+  return valor;
+}
+
+function mascaraCRP(valor) {
+  valor = valor.replace(/\D/g, '');
+  valor = valor.replace(/(\d{2})(\d{0,5})/, 'CRP $1/$2');
+  return valor;
+}
+
+function aplicarMascara(id, fn) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', () => {
+    el.value = fn(el.value);
+  });
+}
 
 let usuarioLogado = null;
 let tamanhoFonte = 15;
@@ -124,33 +160,50 @@ btnFonteMaior.addEventListener('click', () => {
     }
 });
 
+function configurarMascaras() {
+  // Cadastro de paciente
+  aplicarMascara('pac-telefone', mascaraTelefone);
+  aplicarMascara('pac-celular', mascaraTelefone);
+  aplicarMascara('pac-cpf', mascaraCPF);
+  aplicarMascara('pac-responsavel-telefone', mascaraTelefone);
+  aplicarMascara('pac-responsavel-celular', mascaraTelefone);
+  aplicarMascara('pac-responsavel-cpf', mascaraCPF);
+
+  // Configurações
+  aplicarMascara('config-cnpj', mascaraCNPJ);
+  aplicarMascara('config-telefone', mascaraTelefone);
+  aplicarMascara('config-crp', mascaraCRP);
+}
+
+configurarMascaras();
+
 /* Inicialização */
 function inicializar() {
-    const iconeClaro = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.166 17.834a.75.75 0 00-1.06 1.06l1.59 1.591a.75.75 0 001.061-1.06l-1.59-1.591zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.166 6.166a.75.75 0 001.06 1.06l1.591-1.59a.75.75 0 00-1.06-1.061L6.166 6.166z"/></svg> Modo claro`;
+  document.getElementById('tela-loading').classList.add('escondido');
 
-    const iconeEscuro = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z" clip-rule="evenodd"/></svg> Modo escuro`;
+  const iconeClaro = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.166 17.834a.75.75 0 00-1.06 1.06l1.59 1.591a.75.75 0 001.061-1.06l-1.59-1.591zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.166 6.166a.75.75 0 001.06 1.06l1.591-1.59a.75.75 0 00-1.06-1.061L6.166 6.166z"/></svg> Modo claro`;
 
-    // Inicia sempre no modo escuro
-    const temaSalvo = localStorage.getItem('tema') || 'escuro';
-    if (temaSalvo === 'escuro') {
-        document.body.classList.add('escuro');
-        btnTema.innerHTML = iconeClaro;
-        btnTemaConfig.innerHTML = iconeClaro;
-    } else {
-        document.body.classList.remove('escuro');
-        btnTema.innerHTML = iconeEscuro;
-        btnTemaConfig.innerHTML = iconeEscuro;
-    }
+  const iconeEscuro = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z" clip-rule="evenodd"/></svg> Modo escuro`;
 
-    // Recupera fonte salva
-    const fonteSalva = localStorage.getItem('fonte');
-    if (fonteSalva) {
-        tamanhoFonte = parseInt(fonteSalva);
-        aplicarFonte(tamanhoFonte);
-    }
+  const temaSalvo = localStorage.getItem('tema') || 'escuro';
+  
+  if (temaSalvo === 'escuro') {
+    document.body.classList.add('escuro');
+    if (btnTema) btnTema.innerHTML = iconeClaro;
+    if (btnTemaConfig) btnTemaConfig.innerHTML = iconeClaro;
+  } else {
+    document.body.classList.remove('escuro');
+    if (btnTema) btnTema.innerHTML = iconeEscuro;
+    if (btnTemaConfig) btnTemaConfig.innerHTML = iconeEscuro;
+  }
 
-    // Mostra a tela de boas-vindas ao abrir
-    mostrarTela(telaBoasVindas);
+  const fonteSalva = localStorage.getItem('fonte');
+  if (fonteSalva) {
+    tamanhoFonte = parseInt(fonteSalva);
+    aplicarFonte(tamanhoFonte);
+  }
+
+  mostrarTela(telaBoasVindas);
 }
 
 // Roda tudo quando a página carregar
@@ -196,7 +249,12 @@ btnCadastrar.addEventListener('click', async () => {
         inputSenhaConfirma.value = '';
         erroCadastro.textContent = '';
 
-        mostrarTela(telaLogin);
+        const loading = document.getElementById('tela-loading');
+        loading.classList.remove('escondido');
+        setTimeout(() => {
+            loading.classList.add('escondido');
+            mostrarTela(telaLogin);
+        }, 2000);
     } catch (erro) {
         if (erro.code === 'auth/email-already-in-use') {
             erroCadastro.textContent = 'Este e-mail já está cadastrado.';
@@ -243,8 +301,13 @@ btnEntrar.addEventListener('click', async () => {
         carregarPacientes();
         carregarConfiguracoes();
         await gerarConsultasTodosPacientes();
+        const loading = document.getElementById('tela-loading');
+        loading.classList.remove('escondido');
         mostrarTela(app);
         navegarPara('dashboard');
+        setTimeout(() => {
+            loading.classList.add('escondido');
+        }, 2000);
         pedirPermissaoNotificacao();
         verificarNotificacoes();
         setInterval(verificarNotificacoes, 30 * 60 * 1000);
@@ -1206,6 +1269,15 @@ async function carregarConfiguracoes() {
     configNomeProfissional.value = config.nomeProfissional || '';
     document.getElementById('config-nome-empresa').value = config.nomeEmpresa || '';
     document.getElementById('config-crp').value = config.crp || '';
+    if (config.avatar) {
+      document.querySelectorAll('.avatar-opcao').forEach(img => {
+        img.classList.remove('selecionado');
+        if (img.dataset.avatar === config.avatar) {
+          img.classList.add('selecionado');
+        }
+      });
+      atualizarAvatarCabecalho(config.avatar);
+    }
     document.getElementById('config-cnpj').value = config.cnpj || '';
     document.getElementById('config-telefone').value = config.telefoneClinica || '';
     document.getElementById('config-endereco').value = config.enderecoClinica || '';
@@ -1232,19 +1304,22 @@ btnSalvarConfig.addEventListener('click', async () => {
   const nomeProfissional = configNomeProfissional.value.trim();
   const nomeEmpresa = document.getElementById('config-nome-empresa').value.trim();
   const crp = document.getElementById('config-crp').value.trim();
+  const avatarSelecionado = document.querySelector('.avatar-opcao.selecionado');
+  const avatar = avatarSelecionado ? avatarSelecionado.dataset.avatar : null;
   const cnpj = document.getElementById('config-cnpj').value.trim();
   const telefoneClinica = document.getElementById('config-telefone').value.trim();
   const enderecoClinica = document.getElementById('config-endereco').value.trim();
 
   await db.collection('configuracoes').doc(usuarioLogado.uid).set({
-    nomeClinica,
-    nomeProfissional,
-    nomeEmpresa,
-    cnpj,
-    crp,
-    telefoneClinica,
-    enderecoClinica,
-    usuarioId: usuarioLogado.uid
+      nomeClinica,
+      nomeProfissional,
+      nomeEmpresa,
+      cnpj,
+      crp,
+      avatar,
+      telefoneClinica,
+      enderecoClinica,
+      usuarioId: usuarioLogado.uid
   }, { merge: true });
 
   aplicarConfiguracoes({ nomeClinica, nomeProfissional });
@@ -2570,3 +2645,21 @@ async function carregarDashboard() {
 
   renderConsultasHoje();
 }
+
+// Seleção de Avatares Perfil
+function atualizarAvatarCabecalho(nomeAvatar) {
+  const avatarEl = document.querySelector('.avatar');
+  if (nomeAvatar) {
+    avatarEl.innerHTML = `<img src="assets/avatares/${nomeAvatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />`;
+  } else {
+    avatarEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clip-rule="evenodd"/></svg>`;
+  }
+}
+
+document.querySelectorAll('.avatar-opcao').forEach(img => {
+  img.addEventListener('click', () => {
+    document.querySelectorAll('.avatar-opcao').forEach(i => i.classList.remove('selecionado'));
+    img.classList.add('selecionado');
+    atualizarAvatarCabecalho(img.dataset.avatar);
+  });
+});

@@ -6,6 +6,8 @@
   <meta name="theme-color" content="#5B7FA6" />
   <title>Consultório</title>
 
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
   <!-- Link pro CSS -->
   <link rel="stylesheet" href="style.css" />
 
@@ -28,6 +30,23 @@
   </script>
 </head>
 <body>
+
+  <!-- Tela de Loading -->
+  <div id="tela-loading">
+    <div class="loading-content">
+      <img src="assets/terapeuta.png" alt="Carregando" class="loading-sprite" />
+      <div class="loading-titulo">
+        <span>A</span>
+        <span>P</span>
+        <span>S</span>
+        <span>I</span>
+      </div>
+      <div class="loading-bar">
+        <div class="loading-progress"></div>
+      </div>
+      <p class="loading-texto">Carregando...</p>
+    </div>
+  </div>
 
   <!-- Tela de Boas-Vindas-->
   <div id="tela-boas-vindas">
@@ -561,11 +580,6 @@
             <h2 id="saudacao-texto">Bom dia, Dr.</h2>
             <p id="saudacao-data"></p>
           </div>
-          <div class="saudacao-icone">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
-              <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clip-rule="evenodd"/>
-            </svg>
-          </div>
         </div>
         <div class="cards-resumo">
           <div class="card-stat" id="card-consultas">
@@ -877,6 +891,19 @@
             </div>
             <input type="text" id="config-endereco" class="config-input" placeholder="Ex: SCRN 716, Bloco D, Sala 201" />
           </div>
+          <div class="item-config">
+            <div>
+              <div class="config-nome">Avatar do perfil</div>
+              <div class="config-desc">Escolha um avatar para seu perfil</div>
+            </div>
+            <div class="avatar-opcoes">
+              <img src="assets/avatares/avatar1.png" class="avatar-opcao" data-avatar="avatar1.png" title="Avatar 1" />
+              <img src="assets/avatares/avatar2.png" class="avatar-opcao" data-avatar="avatar2.png" title="Avatar 2" />
+              <img src="assets/avatares/avatar3.png" class="avatar-opcao" data-avatar="avatar3.png" title="Avatar 3" />
+              <img src="assets/avatares/avatar4.png" class="avatar-opcao" data-avatar="avatar4.png" title="Avatar 4" />
+              <img src="assets/avatares/avatar5.png" class="avatar-opcao" data-avatar="avatar5.png" title="Avatar 5" />
+            </div>
+          </div>
           <div class="item-config" style="justify-content: flex-end">
             <button class="btn-primario" id="btn-salvar-config">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
@@ -890,7 +917,7 @@
               <div class="config-nome">Aparência</div>
               <div class="config-desc">Alternar entre modo claro e escuro</div>
             </div>
-            <button id="btn-tema-config">
+            <button id="btn-tema-config" class="btn-primario">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
                 <path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.166 17.834a.75.75 0 00-1.06 1.06l1.59 1.591a.75.75 0 001.061-1.06l-1.59-1.591zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.166 6.166a.75.75 0 001.06 1.06l1.591-1.59a.75.75 0 00-1.06-1.061L6.166 6.166z"/>
               </svg>
