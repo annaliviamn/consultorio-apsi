@@ -133,7 +133,7 @@ function alternarTema() {
 
     btnTema.innerHTML = escuro ? iconeEscuro : iconeClaro;
     btnTemaConfig.innerHTML = escuro ? iconeEscuro : iconeClaro;
-    localStorage.setItem('tema', escuro ? 'escuro' : 'claro');
+    localStorage.setItem('consultorio_tema', escuro ? 'escuro' : 'claro');
 }
 
 btnTema.addEventListener('click', alternarTema);
@@ -143,7 +143,7 @@ btnTemaConfig.addEventListener('click', alternarTema);
 function aplicarFonte(tamanho) {
   const escala = tamanho / 15;
   document.getElementById('app').style.zoom = escala;
-  localStorage.setItem('fonte', tamanho);
+  localStorage.setItem('consultorio_fonte', tamanho);
 }
 
 btnFonteMenor.addEventListener('click', () => {
@@ -185,7 +185,7 @@ function inicializar() {
 
   const iconeEscuro = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path fill-rule="evenodd" d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z" clip-rule="evenodd"/></svg> Modo escuro`;
 
-  const temaSalvo = localStorage.getItem('tema') || 'escuro';
+  const temaSalvo = localStorage.getItem('consultorio_tema') || 'escuro';
   
   if (temaSalvo === 'escuro') {
     document.body.classList.add('escuro');
@@ -197,7 +197,7 @@ function inicializar() {
     if (btnTemaConfig) btnTemaConfig.innerHTML = iconeEscuro;
   }
 
-  const fonteSalva = localStorage.getItem('fonte');
+  const fonteSalva = localStorage.getItem('consultorio_fonte');
   if (fonteSalva) {
     tamanhoFonte = parseInt(fonteSalva);
     aplicarFonte(tamanhoFonte);
