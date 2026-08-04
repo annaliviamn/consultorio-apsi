@@ -177,6 +177,7 @@ function configurarMascaras() {
   aplicarMascara('pac-responsavel-celular', mascaraTelefone);
   aplicarMascara('pac-responsavel-cpf', mascaraCPF);
   aplicarMascara('pac-valor-sessao', mascaraMoeda);
+  aplicarMascara('pagamento-valor', mascaraMoeda);
 
   // Configurações
   aplicarMascara('config-cnpj', mascaraCNPJ);
