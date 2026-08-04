@@ -311,6 +311,7 @@ btnEntrar.addEventListener('click', async () => {
         carregarPacientes();
         carregarConfiguracoes();
         await gerarConsultasTodosPacientes();
+        await gerarPagamentosMesTodosPacientes();
         const loading = document.getElementById('tela-loading');
         loading.classList.remove('escondido');
         mostrarTela(app);
@@ -2098,6 +2099,39 @@ async function gerarConsultasTodosPacientes() {
 
   for (const p of pacientes) {
     await gerarConsultasMes(p);
+  }
+}
+
+/* Gerar Pagamentos do Mês para Todos os Pacientes */
+async function gerarPagamentosMesTodosPacientes() {
+  const agora = new Date();
+  const mes = agora.getMonth() + 1;
+  const ano = agora.getFullYear();
+
+  const snapshotPacientes = await db.collection('pacientes')
+    .where('usuarioId', '==', usuarioLogado.uid)
+    .get();
+
+  const pacientes = snapshotPacientes.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  for (const p of pacientes) {
+    const snapshotPagamento = await db.collection('pagamentos')
+      .where('pacienteId', '==', p.id)
+      .where('mes', '==', mes)
+      .where('ano', '==', ano)
+      .get();
+
+    if (snapshotPagamento.empty) {
+      await db.collection('pagamentos').add({
+        pacienteId: p.id,
+        usuarioId: usuarioLogado.uid,
+        mes,
+        ano,
+        valor: p.valorSessao || '',
+        status: 'pendente',
+        dataPagamento: null
+      });
+    }
   }
 }
 
