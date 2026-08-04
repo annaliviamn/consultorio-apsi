@@ -185,6 +185,13 @@ function configurarMascaras() {
   aplicarMascara('config-crp', mascaraCRP);
 }
 
+function formatarMoeda(valor) {
+  if (!valor) return '—';
+  const num = Number(String(valor).replace(/[^0-9,]/g, '').replace(',', '.'));
+  if (isNaN(num)) return 'R$ ' + valor;
+  return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
 configurarMascaras();
 
 /* Inicialização */
@@ -695,7 +702,7 @@ function abrirPerfil(paciente) {
     ? ['', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][paciente.diaSemana]
     : 'Não informado';
   document.getElementById('pf-horario-fixo').textContent = paciente.horarioFixo || 'Não informado';
-  document.getElementById('pf-valor').textContent = paciente.valorSessao ? `R$ ${paciente.valorSessao}` : 'Não informado';
+  document.getElementById('pf-valor').textContent = paciente.valorSessao ? formatarMoeda(paciente.valorSessao) : 'Não informado';
   document.getElementById('pf-pagamento').textContent = paciente.formaPagamento || 'Não informado';
   document.getElementById('pf-profissional').textContent = paciente.profissional || 'Não informado';
 
@@ -793,7 +800,7 @@ async function carregarPagamentos(pacienteId) {
       return `
         <div class="pagamento-item">
           <div class="pagamento-mes">${meses[p.mes]} ${p.ano}</div>
-          <div class="pagamento-valor">R$ ${p.valor || '—'}</div>
+          <div class="pagamento-valor">${formatarMoeda(p.valor)}</div>
           <button class="pagamento-status ${status}" data-id="${p.id}" data-status="${p.status}">
             ${status === 'pago' ? 'Pago' : status === 'atrasado' ? 'Atrasado' : 'Pendente'}
           </button>
