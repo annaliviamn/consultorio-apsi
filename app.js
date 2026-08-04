@@ -2822,7 +2822,7 @@ async function carregarDashboard() {
           <div class="pac-avatar" style="background:var(--amarelo2);color:var(--amarelo)">${iniciais}</div>
           <div class="consulta-info">
             <div class="consulta-nome">${nome}</div>
-            <div class="consulta-tipo">R$ ${p.valor} · ${p.status === 'pendente' ? 'Pendente' : 'Atrasado'}</div>
+            <div class="consulta-tipo">${formatarMoeda(p.valor)} · ${p.status === 'pendente' ? 'Pendente' : 'Atrasado'}</div>
           </div>
           <span class="badge ${p.status === 'pendente' ? 'pendente' : 'cancelada'}">${p.status === 'pendente' ? 'Pendente' : 'Atrasado'}</span>
         </div>
