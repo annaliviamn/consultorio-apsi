@@ -433,12 +433,20 @@
         <label class="campo-label">Anexos</label>
         <input type="file" id="anotacao-anexo" accept="image/*" multiple />
         <div id="preview-anexos" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
-        <button id="btn-salvar-anotacao" class="btn-primario" data-modo="">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
-            <path fill-rule="evenodd" d="M19.916 4.626a.75.75 0 01.208 1.04l-9 13.5a.75.75 0 01-1.154.114l-6-6a.75.75 0 011.06-1.06l5.353 5.353 8.493-12.739a.75.75 0 011.04-.208z" clip-rule="evenodd"/>
-          </svg>
-          Salvar sessão
-        </button>
+        <div style="display:flex;gap:10px;">
+          <button id="btn-encerrar-sessao" class="btn-nav">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+              <path fill-rule="evenodd" d="M4.5 7.5a3 3 0 013-3h9a3 3 0 013 3v9a3 3 0 01-3 3h-9a3 3 0 01-3-3v-9z" clip-rule="evenodd"/>
+            </svg>
+            Encerrar sessão
+          </button>
+          <button id="btn-salvar-anotacao" class="btn-primario" data-modo="">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+              <path fill-rule="evenodd" d="M19.916 4.626a.75.75 0 01.208 1.04l-9 13.5a.75.75 0 01-1.154.114l-6-6a.75.75 0 011.06-1.06l5.353 5.353 8.493-12.739a.75.75 0 011.04-.208z" clip-rule="evenodd"/>
+            </svg>
+            Salvar sessão
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -732,6 +740,13 @@
         </div>
         <div id="lista-anotacoes">
           <p class="vazio">Nenhuma sessão registrada ainda.</p>
+        </div>
+
+        <!-- Gráfico de Evolução -->
+        <div class="perfil-secao" style="margin-top: 16px">Evolução do paciente</div>
+        <div style="background:var(--card);border:1px solid var(--borda);border-radius:var(--raio);padding:20px;margin-top:8px;">
+          <canvas id="grafico-evolucao"></canvas>
+          <p id="grafico-vazio" class="vazio" style="display:none;">Sessões insuficientes para gerar o gráfico.</p>
         </div>
 
         <!-- Controle de Pagamentos -->

@@ -160,6 +160,14 @@ btnFonteMaior.addEventListener('click', () => {
     }
 });
 
+function mascaraMoeda(valor) {
+  valor = valor.replace(/\D/g, '');
+  valor = (Number(valor) / 100).toFixed(2);
+  valor = valor.replace('.', ',');
+  valor = valor.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
+  return 'R$ ' + valor;
+}
+
 function configurarMascaras() {
   // Cadastro de paciente
   aplicarMascara('pac-telefone', mascaraTelefone);
@@ -168,6 +176,7 @@ function configurarMascaras() {
   aplicarMascara('pac-responsavel-telefone', mascaraTelefone);
   aplicarMascara('pac-responsavel-celular', mascaraTelefone);
   aplicarMascara('pac-responsavel-cpf', mascaraCPF);
+  aplicarMascara('pac-valor-sessao', mascaraMoeda);
 
   // Configurações
   aplicarMascara('config-cnpj', mascaraCNPJ);
@@ -458,6 +467,21 @@ btnSalvarPaciente.addEventListener('click', async () => {
         return;
     }
 
+    // Verifica conflito de horário
+    if (btnSalvarPaciente.dataset.modo !== 'editar') {
+        const snapshotConflito = await db.collection('pacientes')
+            .where('usuarioId', '==', usuarioLogado.uid)
+            .where('diaSemana', '==', diaSemana)
+            .where('horarioFixo', '==', horarioFixo)
+            .get();
+
+        if (!snapshotConflito.empty) {
+            const pacienteConflito = snapshotConflito.docs[0].data();
+            const confirmar = confirm(`Atenção! ${pacienteConflito.nome} já tem sessão nesse dia e horário. Deseja cadastrar mesmo assim?`);
+            if (!confirmar) return;
+        }
+    }
+
     const dadosPaciente = {
         nome, dataNascimento, cpf, endereco, telefone, celular, email,
         estadoCivil, escolaridade, ocupacao, filiacao1Parentesco, filiacao1Nome, 
@@ -698,6 +722,7 @@ function abrirPerfil(paciente) {
   document.getElementById('btn-resetar-sessao').onclick = () => resetarCrono(duracao);
 
   carregarAnotacoes(paciente.id);
+  carregarGraficoEvolucao(paciente.id);
   carregarPagamentos(paciente.id);
 }
 
@@ -2110,6 +2135,8 @@ function abrirModalAnotacao(anotacao = null) {
 function fecharModalAnotacao() {
   modalAnotacao.classList.add('escondido');
   anotacaoAtual = null;
+  document.getElementById('anotacao-anexo').value = '';
+  document.getElementById('preview-anexos').innerHTML = '';
 }
 
 document.getElementById('btn-fechar-anotacao').addEventListener('click', fecharModalAnotacao);
@@ -2202,6 +2229,40 @@ btnSalvarAnotacao.addEventListener('click', async () => {
   carregarAnotacoes(pacienteAtual.id);
 });
 
+// Encerrando sessão Manualmente caso precise
+document.getElementById('btn-encerrar-sessao').addEventListener('click', () => {
+  if (cronoInterval) {
+    clearInterval(cronoInterval);
+    cronoInterval = null;
+  }
+
+  const display = document.getElementById('crono-tempo');
+  const tempoAtual = display.textContent;
+
+  // Calcula tempo decorrido
+  const duracaoPaciente = parseInt(pacienteAtual?.duracao) || 50;
+  const partesTexto = tempoAtual.split(':');
+  const minRestantes = parseInt(partesTexto[0]);
+  const segRestantes = parseInt(partesTexto[1]);
+  const segundosRestantes = minRestantes * 60 + segRestantes;
+  const segundosDecorridos = duracaoPaciente * 60 - segundosRestantes;
+  const minDecorridos = Math.floor(segundosDecorridos / 60);
+
+  display.textContent = '00:00';
+  display.classList.add('encerrado');
+
+  document.getElementById('btn-iniciar-sessao').style.display = 'none';
+  document.getElementById('btn-pausar-sessao').style.display = 'none';
+  document.getElementById('btn-resetar-sessao').style.display = 'none';
+
+  // Adiciona observação de encerramento antecipado no campo de texto
+  const textoAtual = document.getElementById('anotacao-texto').value;
+  const observacao = `\n\n[Sessão encerrada antecipadamente após ${minDecorridos} min]`;
+  if (!textoAtual.includes('encerrada antecipadamente')) {
+    document.getElementById('anotacao-texto').value = textoAtual + observacao;
+  }
+});
+
 // Carregar anotações do paciente
 async function carregarAnotacoes(pacienteId) {
   const lista = document.getElementById('lista-anotacoes');
@@ -2222,16 +2283,8 @@ async function carregarAnotacoes(pacienteId) {
     return;
   }
 
-  const evolucaoLabel = {
-    positiva: 'Positiva',
-    estavel: 'Estável',
-    negativa: 'Negativa'
-  };
-
-  const modalidadeLabel = {
-    presencial: 'Presencial',
-    online: 'Online'
-  };
+  const evolucaoLabel = { positiva: 'Positiva', estavel: 'Estável', negativa: 'Negativa' };
+  const modalidadeLabel = { presencial: 'Presencial', online: 'Online' };
 
   lista.innerHTML = anotacoes.map(a => `
     <div class="sessao-card ${a.evolucao}" data-id="${a.id}">
@@ -2250,10 +2303,17 @@ async function carregarAnotacoes(pacienteId) {
         <div style="margin-top:12px;">
           <div style="font-size:11px;color:var(--texto2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Anexos</div>
           <div style="display:flex;flex-wrap:wrap;gap:8px;">
-            ${a.anexos.map(anexo => `
-              <a href="${anexo.url}" target="_blank">
-                <img src="${anexo.thumb}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--borda);cursor:pointer;" title="${anexo.nome}" />
-              </a>
+            ${a.anexos.map((anexo, idx) => `
+              <div style="position:relative;">
+                <a href="${anexo.url}" target="_blank">
+                  <img src="${anexo.thumb}" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--borda);cursor:pointer;" title="${anexo.nome}" />
+                </a>
+                <button class="btn-remover-anexo" data-anotacao-id="${a.id}" data-anexo-idx="${idx}" style="position:absolute;top:-6px;right:-6px;background:var(--vermelho);border:none;border-radius:50%;width:18px;height:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="10" height="10">
+                    <path fill-rule="evenodd" d="M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 01-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z" clip-rule="evenodd"/>
+                  </svg>
+                </button>
+              </div>
             `).join('')}
           </div>
         </div>
@@ -2263,7 +2323,7 @@ async function carregarAnotacoes(pacienteId) {
 
   lista.querySelectorAll('.sessao-card').forEach(card => {
     card.addEventListener('click', async (e) => {
-      if (e.target.tagName === 'IMG' || e.target.tagName === 'A' || e.target.classList.contains('btn-exportar-sessao')) return;
+      if (e.target.tagName === 'IMG' || e.target.tagName === 'A' || e.target.classList.contains('btn-exportar-sessao') || e.target.closest('.btn-remover-anexo')) return;
       const id = card.dataset.id;
       const doc = await db.collection('anotacoes').doc(id).get();
       if (doc.exists) abrirModalAnotacao({ id: doc.id, ...doc.data() });
@@ -2277,6 +2337,121 @@ async function carregarAnotacoes(pacienteId) {
       const doc = await db.collection('anotacoes').doc(id).get();
       if (doc.exists) exportarSessaoIndividual({ id: doc.id, ...doc.data() });
     });
+  });
+
+  lista.querySelectorAll('.btn-remover-anexo').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const confirmar = confirm('Remover este anexo?');
+      if (!confirmar) return;
+
+      const anotacaoId = btn.dataset.anotacaoId;
+      const idx = Number(btn.dataset.anexoIdx);
+
+      const docRef = db.collection('anotacoes').doc(anotacaoId);
+      const docSnap = await docRef.get();
+      const anexos = docSnap.data().anexos || [];
+      anexos.splice(idx, 1);
+      await docRef.update({ anexos });
+      carregarAnotacoes(pacienteId);
+    });
+  });
+}
+
+let graficoEvolucao = null;
+
+async function carregarGraficoEvolucao(pacienteId) {
+  const snapshot = await db.collection('anotacoes')
+    .where('pacienteId', '==', pacienteId)
+    .get();
+
+  const anotacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  anotacoes.sort((a, b) => a.data.localeCompare(b.data));
+
+  const graficoVazio = document.getElementById('grafico-vazio');
+  const canvas = document.getElementById('grafico-evolucao');
+
+  if (anotacoes.length < 2) {
+    graficoVazio.style.display = 'block';
+    canvas.style.display = 'none';
+    if (graficoEvolucao) {
+      graficoEvolucao.destroy();
+      graficoEvolucao = null;
+    }
+    return;
+  }
+
+  graficoVazio.style.display = 'none';
+  canvas.style.display = 'block';
+
+  const evolucaoValor = { positiva: 3, estavel: 2, negativa: 1 };
+  const evolucaoLabel = { positiva: 'Positiva', estavel: 'Estável', negativa: 'Negativa' };
+
+  const labels = anotacoes.map(a =>
+    new Date(a.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+  );
+
+  const dados = anotacoes.map(a => evolucaoValor[a.evolucao] || 2);
+
+  if (graficoEvolucao) {
+    graficoEvolucao.destroy();
+  }
+
+  const ctx = canvas.getContext('2d');
+  graficoEvolucao = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Evolução',
+        data: dados,
+        borderColor: '#5B7FA6',
+        backgroundColor: 'rgba(91, 127, 166, 0.1)',
+        borderWidth: 2,
+        pointBackgroundColor: dados.map(v =>
+          v === 3 ? '#6BAF8E' : v === 1 ? '#C46060' : '#C9974A'
+        ),
+        pointRadius: 6,
+        pointHoverRadius: 8,
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: {
+          min: 0.5,
+          max: 3.5,
+          ticks: {
+            stepSize: 1,
+            callback: (val) => {
+              if (val === 1) return 'Negativa';
+              if (val === 2) return 'Estável';
+              if (val === 3) return 'Positiva';
+              return '';
+            },
+            color: '#9C9890'
+          },
+          grid: { color: 'rgba(255,255,255,0.05)' }
+        },
+        x: {
+          ticks: { color: '#9C9890' },
+          grid: { color: 'rgba(255,255,255,0.05)' }
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const v = ctx.raw;
+              return v === 3 ? 'Positiva' : v === 1 ? 'Negativa' : 'Estável';
+            }
+          }
+        }
+      }
+    }
   });
 }
 
