@@ -187,9 +187,11 @@ function configurarMascaras() {
 
 function formatarMoeda(valor) {
   if (!valor) return '—';
-  const limpo = String(valor).replace(/R\$\s?/g, '').trim();
-  const num = Number(limpo.replace(/\./g, '').replace(',', '.'));
-  if (isNaN(num) || num === 0) return 'R$ ' + limpo;
+  // Remove R$, espaços e pontos de milhar
+  let limpo = String(valor).replace(/R\$\s?/g, '').trim();
+  limpo = limpo.replace(/\./g, '').replace(',', '.');
+  const num = parseFloat(limpo);
+  if (isNaN(num)) return '—';
   return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
