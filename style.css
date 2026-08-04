@@ -1,20 +1,20 @@
 /* Variáveis e Reset */
 :root {
     /* Cores do modo claro suavizado */
-    --bg: #EFECE8;
-    --bg2: #E5E1DC;
-    --card: #F5F2EE;
-    --borda: #D0CBC4;
+    --bg: #E8E4DE;
+    --bg2: #DEDAD4;
+    --card: #EDE9E3;
+    --borda: #C8C3BB;
     --texto: #2C2A27;
     --texto2: #6B6760;
     --acento: #5B7FA6;
-    --acento2: #E4EDF6;
+    --acento2: #DDE8F3;
     --verde: #4A8C6F;
-    --verde2: #E0EFE8;
+    --verde2: #D8EDE4;
     --amarelo: #B07D3A;
-    --amarelo2: #F7EFE0;
+    --amarelo2: #F2E8D8;
     --vermelho: #A04040;
-    --vermelho2: #F5E5E5;
+    --vermelho2: #F0E0E0;
 
     /* Tamanhos */
     --raio: 12px;
