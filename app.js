@@ -478,7 +478,7 @@ btnSalvarPaciente.addEventListener('click', async () => {
     const formaPagamento = document.getElementById('pac-forma-pagamento').value;
     const profissional = document.getElementById('pac-profissional').value.trim();
     const frequencia = document.getElementById('pac-frequencia').value;
-    const modalidade = document.querySelector('input[name="pac-modalidade"]:checked')?.value || 'presencial';
+    const modalidade = document.getElementById('pac-modalidade').value;
     console.log('modalidade selecionada:', modalidade);
     const diaSemana = document.getElementById('pac-dia-semana').value;
     const horarioFixo = document.getElementById('pac-horario-fixo').value;
@@ -1311,9 +1311,7 @@ document.getElementById('btn-editar-paciente').addEventListener('click', () => {
     const modalCorpo = document.querySelector('#modal-paciente .modal-corpo');
     modalCorpo.scrollTop = 0;
 
-    const modalidadeSalva = pacienteAtual.modalidade || 'presencial';
-    const radioModalidade = document.querySelector(`input[name="pac-modalidade"][value="${modalidadeSalva}"]`);
-    if (radioModalidade) radioModalidade.checked = true;
+    document.getElementById('pac-modalidade').value = pacienteAtual.modalidade || 'presencial';
 
     abrirModal();
 });

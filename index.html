@@ -247,20 +247,11 @@
         <label class="campo-label">Horário fixo</label>
         <input type="time" id="pac-horario-fixo" />
         <label class="campo-label">Modalidade de atendimento</label>
-        <div class="radio-grupo">
-          <label class="radio-opcao">
-            <input type="radio" name="pac-modalidade" id="pac-modalidade-presencial" value="presencial" checked />
-            <span class="radio-label">Presencial</span>
-          </label>
-          <label class="radio-opcao">
-            <input type="radio" name="pac-modalidade" id="pac-modalidade-online" value="online" />
-            <span class="radio-label">Online</span>
-          </label>
-          <label class="radio-opcao">
-            <input type="radio" name="pac-modalidade" id="pac-modalidade-hibrida" value="hibrida" />
-            <span class="radio-label">Híbrida</span>
-          </label>
-        </div>
+        <select id="pac-modalidade">
+          <option value="presencial">Presencial</option>
+          <option value="online">Online</option>
+          <option value="hibrida">Híbrida</option>
+        </select>
         <label class="campo-label">Duração da sessão</label>
         <select id="pac-duracao">
           <option value="30">30 minutos</option>
