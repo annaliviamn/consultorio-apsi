@@ -196,11 +196,17 @@ function formatarMoeda(valor) {
 
 function limparMoeda(valor) {
   if (!valor) return '';
-  const limpo = String(valor).replace(/R\$\s?/g, '').trim();
+  let limpo = String(valor).replace(/R\$\s?/g, '').trim();
+  
+  // Formato BR: 1.234,56 — tem vírgula como decimal
   if (limpo.includes(',')) {
-    return limpo.replace(/\./g, '').replace(',', '.');
+    // Remove pontos de milhar e troca vírgula por ponto
+    limpo = limpo.replace(/\./g, '').replace(',', '.');
   }
-  return limpo;
+  // Formato simples: 600 ou 600.00 — não precisa fazer nada
+  
+  const num = parseFloat(limpo);
+  return isNaN(num) ? '' : String(num);
 }
 
 configurarMascaras();
