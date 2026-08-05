@@ -501,7 +501,8 @@ btnSalvarPaciente.addEventListener('click', async () => {
         responsavelNome, responsavelParentesco, responsavelCpf,
         responsavelTelefone, responsavelCelular, responsavelEmail,
         dataInicio, frequencia, diaSemana, horarioFixo, duracao,
-        valorSessao, formaPagamento, profissional, motivo, observacoes
+        valorSessao: valorSessao.replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.').trim(),
+        formaPagamento, profissional, motivo, observacoes
     };
 
     if (btnSalvarPaciente.dataset.modo === 'editar') {
