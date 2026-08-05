@@ -479,6 +479,7 @@ btnSalvarPaciente.addEventListener('click', async () => {
     const profissional = document.getElementById('pac-profissional').value.trim();
     const frequencia = document.getElementById('pac-frequencia').value;
     const modalidade = document.querySelector('input[name="pac-modalidade"]:checked')?.value || 'presencial';
+    console.log('modalidade selecionada:', modalidade);
     const diaSemana = document.getElementById('pac-dia-semana').value;
     const horarioFixo = document.getElementById('pac-horario-fixo').value;
     const duracao = document.getElementById('pac-duracao').value;
