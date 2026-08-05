@@ -186,8 +186,7 @@ function configurarMascaras() {
 }
 
 function formatarMoeda(valor) {
-  if (!valor) return '—';
-  // Remove R$, espaços e pontos de milhar
+  if (!valor || valor === '' || valor === null || valor === undefined) return '—';
   let limpo = String(valor).replace(/R\$\s?/g, '').trim();
   limpo = limpo.replace(/\./g, '').replace(',', '.');
   const num = parseFloat(limpo);
