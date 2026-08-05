@@ -531,12 +531,14 @@ btnSalvarPaciente.addEventListener('click', async () => {
     await gerarConsultasMes(pacienteSalvo);
 
     const agora = new Date();
+    const valorLimpo = valorSessao ? String(valorSessao).replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.').trim() : '';
+    
     await db.collection('pagamentos').add({
         pacienteId: novoDoc.id,
         usuarioId: usuarioLogado.uid,
         mes: agora.getMonth() + 1,
         ano: agora.getFullYear(),
-        valor: valorSessao || '',
+        valor: valorLimpo,
         status: 'pendente',
         dataPagamento: null
     });
