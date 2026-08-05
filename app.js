@@ -194,6 +194,15 @@ function formatarMoeda(valor) {
   return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+function limparMoeda(valor) {
+  if (!valor) return '';
+  const limpo = String(valor).replace(/R\$\s?/g, '').trim();
+  if (limpo.includes(',')) {
+    return limpo.replace(/\./g, '').replace(',', '.');
+  }
+  return limpo;
+}
+
 configurarMascaras();
 
 /* Inicialização */
@@ -459,10 +468,11 @@ btnSalvarPaciente.addEventListener('click', async () => {
     const responsavelEmail = document.getElementById('pac-responsavel-email').value.trim();
     const dataInicio = document.getElementById('pac-inicio').value.trim();
     const valorSessaoRaw = document.getElementById('pac-valor-sessao').value.trim();
-    const valorSessao = valorSessaoRaw.replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.').trim();
+    const valorSessao = limparMoeda(valorSessaoRaw);
     const formaPagamento = document.getElementById('pac-forma-pagamento').value;
     const profissional = document.getElementById('pac-profissional').value.trim();
     const frequencia = document.getElementById('pac-frequencia').value;
+    const modalidade = document.querySelector('input[name="pac-modalidade"]:checked')?.value || 'presencial';
     const diaSemana = document.getElementById('pac-dia-semana').value;
     const horarioFixo = document.getElementById('pac-horario-fixo').value;
     const duracao = document.getElementById('pac-duracao').value;
@@ -500,8 +510,8 @@ btnSalvarPaciente.addEventListener('click', async () => {
         filiacao2Parentesco, filiacao2Nome,
         responsavelNome, responsavelParentesco, responsavelCpf,
         responsavelTelefone, responsavelCelular, responsavelEmail,
-        dataInicio, frequencia, diaSemana, horarioFixo, duracao,
-        valorSessao: valorSessao.replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.').trim(),
+        dataInicio, frequencia, diaSemana, horarioFixo, duracao, modalidade,
+        valorSessao: limparMoeda(valorSessao),
         formaPagamento, profissional, motivo, observacoes
     };
 
@@ -532,7 +542,7 @@ btnSalvarPaciente.addEventListener('click', async () => {
     await gerarConsultasMes(pacienteSalvo);
 
     const agora = new Date();
-    const valorLimpo = valorSessao ? String(valorSessao).replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.').trim() : '';
+    const valorLimpo = limparMoeda(valorSessao);
     
     await db.collection('pagamentos').add({
         pacienteId: novoDoc.id,
@@ -711,6 +721,9 @@ function abrirPerfil(paciente) {
   document.getElementById('pf-valor').textContent = paciente.valorSessao ? formatarMoeda(paciente.valorSessao) : 'Não informado';
   document.getElementById('pf-pagamento').textContent = paciente.formaPagamento || 'Não informado';
   document.getElementById('pf-profissional').textContent = paciente.profissional || 'Não informado';
+  document.getElementById('pf-modalidade').textContent = 
+    paciente.modalidade === 'online' ? 'Online' :
+    paciente.modalidade === 'hibrida' ? 'Híbrida' : 'Presencial';
 
   // Informações clínicas
   document.getElementById('pf-motivo').textContent = paciente.motivo || 'Não informado';
@@ -1290,6 +1303,10 @@ document.getElementById('btn-editar-paciente').addEventListener('click', () => {
 
     const modalCorpo = document.querySelector('#modal-paciente .modal-corpo');
     modalCorpo.scrollTop = 0;
+
+    const modalidadeSalva = pacienteAtual.modalidade || 'presencial';
+    const radioModalidade = document.querySelector(`input[name="pac-modalidade"][value="${modalidadeSalva}"]`);
+    if (radioModalidade) radioModalidade.checked = true;
 
     abrirModal();
 });
@@ -2169,7 +2186,7 @@ function abrirModalAnotacao(anotacao = null) {
     document.getElementById('anotacao-data').value = formatarDataISO(new Date());
     document.getElementById('anotacao-hora').value = pacienteAtual?.horarioFixo || '';
     document.getElementById('anotacao-evolucao').value = 'estavel';
-    document.getElementById('anotacao-modalidade').value = 'presencial';
+    document.getElementById('anotacao-modalidade').value = pacienteAtual?.modalidade || 'presencial';
     document.getElementById('anotacao-texto').value = '';
     document.querySelector('#modal-anotacao .modal-topo h2').textContent = 'Registro de sessão';
     btnSalvarAnotacao.textContent = 'Salvar sessão';
@@ -2702,7 +2719,10 @@ async function carregarDashboard() {
           <div class="consulta-hora">${c.hora}</div>
           <div class="consulta-info">
             <div class="consulta-nome">${nome}</div>
-            <div class="consulta-tipo">Sessao individual · ${c.duracao} min</div>
+            <div class="consulta-tipo">Sessao individual · ${c.duracao} min · ${
+              pacientes.find(p => p.id === c.pacienteId)?.modalidade === 'online' ? 'Online' :
+              pacientes.find(p => p.id === c.pacienteId)?.modalidade === 'hibrida' ? 'Híbrida' : 'Presencial'
+            }</div>
           </div>
           <span class="badge ${c.status}">${c.status.charAt(0).toUpperCase() + c.status.slice(1)}</span>
           ${c.status === 'pendente' ? `

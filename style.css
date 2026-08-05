@@ -2057,3 +2057,37 @@ body {
   50% { width: 70%; margin-left: 0; }
   100% { width: 0%; margin-left: 100%; }
 }
+
+/* Select Modalidade de Sessão */
+.radio-grupo {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.radio-opcao {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  background: var(--card);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  padding: 8px 14px;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.radio-opcao:has(input:checked) {
+  border-color: var(--acento);
+  background: var(--acento2);
+}
+
+.radio-opcao input[type="radio"] {
+  display: none;
+}
+
+.radio-label {
+  font-size: 13px;
+  font-family: sans-serif;
+  color: var(--texto);
+}
