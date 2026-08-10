@@ -2413,9 +2413,8 @@ btnSalvarAnotacao.addEventListener('click', async () => {
   const evolucao = document.getElementById('anotacao-evolucao').value;
   const modalidade = document.getElementById('anotacao-modalidade').value;
   const texto = document.getElementById('anotacao-texto').value.trim();
-  const inputAnexo = document.getElementById('anotacao-anexo');
-  const arquivos = inputAnexo._arquivos || [];
   const preview = document.getElementById('preview-anexos');
+  const arquivos = preview._arquivos || [];
   const anexosDaBiblioteca = preview.dataset.anexos ? JSON.parse(preview.dataset.anexos) : [];
   let anexos = anotacaoAtual?.anexos || [];
 
