@@ -2415,6 +2415,7 @@ btnSalvarAnotacao.addEventListener('click', async () => {
   const texto = document.getElementById('anotacao-texto').value.trim();
   const preview = document.getElementById('preview-anexos');
   const arquivos = preview._arquivos || [];
+  console.log('arquivos pra upload:', arquivos);
   const anexosDaBiblioteca = preview.dataset.anexos ? JSON.parse(preview.dataset.anexos) : [];
   let anexos = anotacaoAtual?.anexos || [];
 
