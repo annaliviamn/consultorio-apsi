@@ -211,6 +211,22 @@ function limparMoeda(valor) {
 
 configurarMascaras();
 
+/* Sons do sistema */
+const sons = {
+  notificacao: new Audio('assets/sounds/notificacao.mp3'),
+  alerta: new Audio('assets/sounds/alerta.mp3'),
+  sessaoEncerrada: new Audio('assets/sounds/sessao-encerrada.mp3')
+};
+
+function tocarSom(nome) {
+  try {
+    sons[nome].currentTime = 0;
+    sons[nome].play();
+  } catch (e) {
+    console.log('Som não disponível:', nome);
+  }
+}
+
 /* Inicialização */
 function inicializar() {
   document.getElementById('tela-loading').classList.add('escondido');
@@ -616,6 +632,7 @@ function iniciarCrono(duracaoMinutos) {
       display.textContent = '00:00';
       display.classList.add('encerrado');
       btnPausar.style.display = 'none';
+      tocarSom('sessaoEncerrada');
       alert('Sessão encerrada!');
     }
   }, 1000);
@@ -1988,6 +2005,10 @@ async function carregarAlertas() {
     return;
   }
 
+  if (alertas.some(a => a.tipo === 'urgente')) {
+    tocarSom('alerta');
+  }
+
   listaAlertas.innerHTML = alertas.map(a => `
     <div class="alerta-item ${a.tipo}">
       <div class="consulta-info">
@@ -2038,6 +2059,7 @@ async function verificarNotificacoes() {
   pendentes.forEach(c => {
     const nome = mapaPacientes[c.pacienteId] || 'Paciente';
     const minutosRestantes = Math.floor((new Date(`${hoje}T${c.hora}`) - agora) / 60000);
+    tocarSom('notificacao')
     new Notification('Consulta sem confirmação', {
       body: `${nome} ainda não confirmou a consulta das ${c.hora} (em ${minutosRestantes} min)`,
       icon: 'assets/logo.jpg'
@@ -2054,6 +2076,7 @@ async function verificarNotificacoes() {
   confirmadas.forEach(c => {
     const nome = mapaPacientes[c.pacienteId] || 'Paciente';
     const minutosRestantes = Math.floor((new Date(`${hoje}T${c.hora}`) - agora) / 60000);
+    tocarSom('notificacao')
     new Notification('Consulta se aproximando', {
       body: `${nome} tem consulta às ${c.hora} (em ${minutosRestantes} min)`,
       icon: 'assets/logo.jpg'
@@ -2196,10 +2219,54 @@ function abrirModalAnotacao(anotacao = null) {
     document.querySelector('#modal-anotacao .modal-topo h2').textContent = 'Registro de sessão';
     btnSalvarAnotacao.textContent = 'Salvar sessão';
     btnSalvarAnotacao.dataset.modo = '';
+
+    // Verifica se tem rascunho salvo pra esse paciente
+    const chaveRascunho = `consultorio_rascunho_${pacienteAtual.id}`;
+    const rascunho = localStorage.getItem(chaveRascunho);
+    if (rascunho) {
+      const dados = JSON.parse(rascunho);
+      const recuperar = confirm(`Encontramos um rascunho não salvo da sessão de ${pacienteAtual.nome} (${dados.data}). Deseja recuperar?`);
+      if (recuperar) {
+        document.getElementById('anotacao-data').value = dados.data || formatarDataISO(new Date());
+        document.getElementById('anotacao-hora').value = dados.hora || '';
+        document.getElementById('anotacao-evolucao').value = dados.evolucao || 'estavel';
+        document.getElementById('anotacao-modalidade').value = dados.modalidade || 'presencial';
+        document.getElementById('anotacao-texto').value = dados.texto || '';
+      } else {
+        localStorage.removeItem(chaveRascunho);
+      }
+    }
   }
 
   document.getElementById('erro-anotacao').textContent = '';
   modalAnotacao.classList.remove('escondido');
+
+  // Inicia auto-save a cada 30 segundos
+  if (!anotacao) {
+    iniciarAutoSave();
+  }
+}
+
+let autoSaveInterval = null;
+
+function iniciarAutoSave() {
+  if (autoSaveInterval) clearInterval(autoSaveInterval);
+  
+  autoSaveInterval = setInterval(() => {
+    if (!pacienteAtual) return;
+    const chaveRascunho = `consultorio_rascunho_${pacienteAtual.id}`;
+    const rascunho = {
+      data: document.getElementById('anotacao-data').value,
+      hora: document.getElementById('anotacao-hora').value,
+      evolucao: document.getElementById('anotacao-evolucao').value,
+      modalidade: document.getElementById('anotacao-modalidade').value,
+      texto: document.getElementById('anotacao-texto').value,
+      savedAt: new Date().toISOString()
+    };
+    if (rascunho.texto.trim()) {
+      localStorage.setItem(chaveRascunho, JSON.stringify(rascunho));
+    }
+  }, 30000);
 }
 
 function fecharModalAnotacao() {
@@ -2293,6 +2360,14 @@ btnSalvarAnotacao.addEventListener('click', async () => {
       texto,
       anexos
     });
+  }
+
+  if (autoSaveInterval) {
+    clearInterval(autoSaveInterval);
+    autoSaveInterval = null;
+  }
+  if (pacienteAtual) {
+    localStorage.removeItem(`consultorio_rascunho_${pacienteAtual.id}`);
   }
 
   fecharModalAnotacao();
