@@ -2306,7 +2306,79 @@ async function uploadAnexo(arquivo) {
   return null;
 }
 
-document.getElementById('anotacao-anexo').addEventListener('change', (e) => {
+/* Biblioteca de Imagens */
+async function carregarBiblioteca() {
+  const lista = document.getElementById('lista-biblioteca');
+  lista.innerHTML = '<p class="vazio">Carregando...</p>';
+
+  const snapshot = await db.collection('biblioteca')
+    .where('usuarioId', '==', usuarioLogado.uid)
+    .get();
+
+  if (snapshot.empty) {
+    lista.innerHTML = '<p class="vazio">Nenhuma imagem na biblioteca ainda.</p>';
+    return;
+  }
+
+  const imagens = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  lista.innerHTML = imagens.map(img => `
+    <div style="position:relative;cursor:pointer;" class="biblioteca-item" data-url="${img.url}" data-thumb="${img.thumb}" data-nome="${img.nome}">
+      <img src="${img.thumb}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:2px solid var(--borda);" title="${img.nome}" />
+      <div style="font-size:10px;color:var(--texto2);text-align:center;margin-top:4px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${img.nome}</div>
+    </div>
+  `).join('');
+
+  lista.querySelectorAll('.biblioteca-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const anexo = {
+        url: item.dataset.url,
+        thumb: item.dataset.thumb,
+        nome: item.dataset.nome
+      };
+      adicionarAnexoDaBiblioteca(anexo);
+      document.getElementById('modal-biblioteca').classList.add('escondido');
+    });
+  });
+}
+
+function adicionarAnexoDaBiblioteca(anexo) {
+  const preview = document.getElementById('preview-anexos');
+  const jaExiste = preview.dataset.anexos 
+    ? JSON.parse(preview.dataset.anexos).some(a => a.url === anexo.url)
+    : false;
+
+  if (jaExiste) {
+    alert('Esta imagem já foi adicionada!');
+    return;
+  }
+
+  const anexosAtuais = preview.dataset.anexos ? JSON.parse(preview.dataset.anexos) : [];
+  anexosAtuais.push(anexo);
+  preview.dataset.anexos = JSON.stringify(anexosAtuais);
+
+  const div = document.createElement('div');
+  div.style.position = 'relative';
+  div.innerHTML = `
+    <img src="${anexo.thumb}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--borda);" />
+  `;
+  preview.appendChild(div);
+}
+
+document.getElementById('btn-abrir-biblioteca').addEventListener('click', () => {
+  carregarBiblioteca();
+  document.getElementById('modal-biblioteca').classList.remove('escondido');
+});
+
+document.getElementById('btn-fechar-biblioteca').addEventListener('click', () => {
+  document.getElementById('modal-biblioteca').classList.add('escondido');
+});
+
+document.getElementById('fundo-biblioteca').addEventListener('click', () => {
+  document.getElementById('modal-biblioteca').classList.add('escondido');
+});
+
+document.getElementById('anotacao-anexo').addEventListener('change', async (e) => {
   const preview = document.getElementById('preview-anexos');
   const arquivos = Array.from(e.target.files);
 
@@ -2315,12 +2387,23 @@ document.getElementById('anotacao-anexo').addEventListener('change', (e) => {
     return;
   }
 
-  preview.innerHTML = arquivos.map(arquivo => `
-    <div style="position:relative;">
-      <img src="${URL.createObjectURL(arquivo)}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--borda);" />
-      <div style="font-size:10px;color:var(--texto2);text-align:center;margin-top:2px;">${arquivo.name.length > 10 ? arquivo.name.substring(0, 10) + '...' : arquivo.name}</div>
-    </div>
-  `).join('');
+  preview.innerHTML = '<p style="font-size:12px;color:var(--texto2)">Carregando prévia...</p>';
+
+  const resultados = await Promise.all(arquivos.map(async (arquivo) => {
+    const url = URL.createObjectURL(arquivo);
+    return { url, thumb: url, nome: arquivo.name, arquivo };
+  }));
+
+  preview.innerHTML = '';
+  resultados.forEach(r => {
+    const div = document.createElement('div');
+    div.style.position = 'relative';
+    div.innerHTML = `<img src="${r.thumb}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--borda);" />`;
+    preview.appendChild(div);
+  });
+
+  preview.dataset.arquivos = JSON.stringify(resultados.map(r => r.nome));
+  preview._arquivos = resultados.map(r => r.arquivo);
 });
 
 // Salvar anotação
@@ -2331,20 +2414,35 @@ btnSalvarAnotacao.addEventListener('click', async () => {
   const modalidade = document.getElementById('anotacao-modalidade').value;
   const texto = document.getElementById('anotacao-texto').value.trim();
   const inputAnexo = document.getElementById('anotacao-anexo');
-  const arquivos = Array.from(inputAnexo.files);
+  const arquivos = inputAnexo._arquivos || [];
+  const preview = document.getElementById('preview-anexos');
+  const anexosDaBiblioteca = preview.dataset.anexos ? JSON.parse(preview.dataset.anexos) : [];
   let anexos = anotacaoAtual?.anexos || [];
-
-  if (arquivos.length > 0) {
-    const preview = document.getElementById('preview-anexos');
-    preview.innerHTML = '<p style="font-size:12px;color:var(--texto2)">Enviando anexos...</p>';
-    const resultados = await Promise.all(arquivos.map(uploadAnexo));
-    const novosAnexos = resultados.filter(r => r !== null);
-    anexos = [...anexos, ...novosAnexos];
-  }
 
   if (!data || !texto) {
     document.getElementById('erro-anotacao').textContent = 'Data e anotação são obrigatórios.';
     return;
+  }
+
+  if (arquivos.length > 0) {
+    preview.innerHTML = '<p style="font-size:12px;color:var(--texto2)">Enviando anexos...</p>';
+    const resultados = await Promise.all(arquivos.map(uploadAnexo));
+    const novosAnexos = resultados.filter(r => r !== null);
+
+    // Salva na biblioteca
+    for (const anexo of novosAnexos) {
+      await db.collection('biblioteca').add({
+        usuarioId: usuarioLogado.uid,
+        url: anexo.url,
+        thumb: anexo.thumb,
+        nome: anexo.nome,
+        criadoEm: new Date().toISOString()
+      });
+    }
+
+    anexos = [...anexos, ...novosAnexos, ...anexosDaBiblioteca];
+  } else {
+    anexos = [...anexos, ...anexosDaBiblioteca];
   }
 
   if (btnSalvarAnotacao.dataset.modo === 'editar') {
