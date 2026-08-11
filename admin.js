@@ -13,6 +13,7 @@ function navegarAdmin(nomeTela) {
   if (nomeTela === 'pacientes') carregarPacientesAdmin();
   if (nomeTela === 'consultas') carregarConsultasAdmin();
   if (nomeTela === 'pagamentos') carregarPagamentosAdmin();
+  if (nomeTela === 'biblioteca') carregarBibliotecaAdmin();
 }
 
 document.querySelectorAll('.aba').forEach(aba => {
@@ -36,11 +37,15 @@ async function carregarVisaoGeral() {
   const snapshotPacientes = await db.collection('pacientes').get();
   const snapshotConsultas = await db.collection('consultas').get();
   const snapshotPagamentos = await db.collection('pagamentos').get();
+  const snapshotAnotacoes = await db.collection('anotacoes').get();
+  const snapshotBiblioteca = await db.collection('biblioteca').get();
 
   document.getElementById('stat-admin-usuarios').textContent = snapshotUsuarios.size;
   document.getElementById('stat-admin-pacientes').textContent = snapshotPacientes.size;
   document.getElementById('stat-admin-consultas').textContent = snapshotConsultas.size;
   document.getElementById('stat-admin-pagamentos').textContent = snapshotPagamentos.size;
+  document.getElementById('stat-admin-anotacoes').textContent = snapshotAnotacoes.size;
+  document.getElementById('stat-admin-biblioteca').textContent = snapshotBiblioteca.size;
 }
 
 /* Usuários */
@@ -128,29 +133,41 @@ async function carregarPacientesAdmin() {
           <th>CPF</th>
           <th>Data de nascimento</th>
           <th>Telefone</th>
+          <th>Modalidade</th>
           <th>Frequência</th>
           <th>Horário</th>
+          <th>Valor sessão</th>
           <th>Profissional</th>
           <th>Usuário</th>
           <th>Ações</th>
         </tr>
       </thead>
       <tbody>
-        ${pacientes.map(p => `
-          <tr>
-            <td>${p.nome || '—'}</td>
-            <td>${p.cpf || '—'}</td>
-            <td>${p.dataNascimento ? new Date(p.dataNascimento + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}</td>
-            <td>${p.telefone || '—'}</td>
-            <td>${p.frequencia || '—'}</td>
-            <td>${p.horarioFixo || '—'}</td>
-            <td>${p.profissional || '—'}</td>
-            <td>${mapaUsuarios[p.usuarioId] || '—'}</td>
-            <td>
-              <button class="btn-excluir-paciente btn-excluir-perfil" data-id="${p.id}" style="font-size:12px;padding:4px 10px;">Excluir</button>
-            </td>
-          </tr>
-        `).join('')}
+        ${pacientes.map(p => {
+          const valorExibir = p.valorSessao ? (() => {
+            const limpo = String(p.valorSessao).replace(/R\$\s?/g, '').trim().replace(/\./g, '').replace(',', '.');
+            const num = parseFloat(limpo);
+            return isNaN(num) ? 'NaN' : 'R$ ' + num.toFixed(2).replace('.', ',');
+          })() : '—';
+          
+          return `
+            <tr>
+              <td>${p.nome || '—'}</td>
+              <td>${p.cpf || '—'}</td>
+              <td>${p.dataNascimento ? new Date(p.dataNascimento + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}</td>
+              <td>${p.telefone || '—'}</td>
+              <td>${p.modalidade === 'online' ? 'Online' : p.modalidade === 'hibrida' ? 'Híbrida' : 'Presencial'}</td>
+              <td>${p.frequencia || '—'}</td>
+              <td>${p.horarioFixo || '—'}</td>
+              <td style="color:${valorExibir.includes('NaN') ? 'var(--vermelho)' : 'inherit'}">${valorExibir}</td>
+              <td>${p.profissional || '—'}</td>
+              <td>${mapaUsuarios[p.usuarioId] || '—'}</td>
+              <td style="display:flex;gap:4px;">
+                <button class="btn-excluir-paciente btn-excluir-perfil" data-id="${p.id}" style="font-size:12px;padding:4px 10px;">Excluir</button>
+              </td>
+            </tr>
+          `;
+        }).join('')}
       </tbody>
     </table>
   `;
@@ -306,6 +323,88 @@ async function limparDadosOrfaos() {
 
   alert(`Limpeza concluída! ${totalRemovidos} registro(s) órfão(s) removido(s).`);
   carregarVisaoGeral();
+}
+
+/* Corrigir valores monetários */
+async function corrigirValoresMonetarios() {
+  const confirmar = confirm('Isso vai corrigir todos os valores de sessão com formato incorreto. Continuar?');
+  if (!confirmar) return;
+
+  const snapshot = await db.collection('pacientes').get();
+  let corrigidos = 0;
+
+  for (const doc of snapshot.docs) {
+    const valor = doc.data().valorSessao;
+    if (!valor) continue;
+
+    const limpo = String(valor).replace(/R\$\s?/g, '').trim();
+    const semPontos = limpo.replace(/\./g, '').replace(',', '.');
+    const num = parseFloat(semPontos);
+
+    if (isNaN(num)) {
+      await doc.ref.update({ valorSessao: '' });
+      corrigidos++;
+    } else if (String(valor).includes('R$') || String(valor).includes(',')) {
+      await doc.ref.update({ valorSessao: String(num) });
+      corrigidos++;
+    }
+  }
+
+  alert(`Correção concluída! ${corrigidos} registro(s) corrigido(s).`);
+  carregarVisaoGeral();
+}
+
+/* Biblioteca */
+async function carregarBibliotecaAdmin() {
+  const snapshot = await db.collection('biblioteca').get();
+  const snapshotUsuarios = await db.collection('usuarios').get();
+  const lista = document.getElementById('lista-admin-biblioteca');
+
+  const mapaUsuarios = {};
+  snapshotUsuarios.docs.forEach(doc => mapaUsuarios[doc.id] = doc.data().nome);
+
+  if (snapshot.empty) {
+    lista.innerHTML = '<p class="vazio">Nenhuma imagem na biblioteca.</p>';
+    return;
+  }
+
+  const imagens = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  lista.innerHTML = `
+    <table class="admin-tabela">
+      <thead>
+        <tr>
+          <th>Miniatura</th>
+          <th>Nome</th>
+          <th>Usuário</th>
+          <th>Data</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${imagens.map(img => `
+          <tr>
+            <td><img src="${img.thumb}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;" /></td>
+            <td>${img.nome || '—'}</td>
+            <td>${mapaUsuarios[img.usuarioId] || '—'}</td>
+            <td>${img.criadoEm ? new Date(img.criadoEm).toLocaleDateString('pt-BR') : '—'}</td>
+            <td>
+              <button class="btn-excluir-imagem btn-excluir-perfil" data-id="${img.id}" style="font-size:12px;padding:4px 10px;">Excluir</button>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+
+  document.querySelectorAll('.btn-excluir-imagem').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const confirmar = confirm('Excluir esta imagem da biblioteca?');
+      if (!confirmar) return;
+      await db.collection('biblioteca').doc(btn.dataset.id).delete();
+      carregarBibliotecaAdmin();
+    });
+  });
 }
 
 /* Inicialização */
