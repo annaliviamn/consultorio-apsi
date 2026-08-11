@@ -216,7 +216,7 @@ async function carregarConsultasAdmin() {
   }
 
   const consultas = snapshotConsultas.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-  consultas.sort((a, b) => b.data.localeCompare(a.data));
+  consultas.sort((a, b) => (mapaPacientes[a.pacienteId] || '').localeCompare(mapaPacientes[b.pacienteId] || '', 'pt-BR'));
 
   function renderTabela(lista, dados) {
     lista.innerHTML = dados.length === 0 ? '<p class="vazio">Nenhum resultado encontrado.</p>' : `
@@ -286,6 +286,7 @@ async function carregarPagamentosAdmin() {
   }
 
   const pagamentos = snapshotPagamentos.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  pagamentos.sort((a, b) => (mapaPacientes[a.pacienteId] || '').localeCompare(mapaPacientes[b.pacienteId] || '', 'pt-BR'));
   const nomesMeses = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 

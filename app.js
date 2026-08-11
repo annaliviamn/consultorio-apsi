@@ -233,24 +233,16 @@ async function corrigirValoresMonetariosApp() {
     .where('usuarioId', '==', usuarioLogado.uid)
     .get();
 
-  let corrigidos = 0;
-
   for (const doc of snapshot.docs) {
     const valor = doc.data().valorSessao;
     if (!valor) continue;
 
-    const limpo = String(valor).replace(/R\$\s?/g, '').trim();
-    const semPontos = limpo.replace(/\./g, '').replace(',', '.');
-    const num = parseFloat(semPontos);
+    const limpo = String(valor).replace(/R\$\s?/g, '').trim().replace(/\./g, '').replace(',', '.');
+    const num = parseFloat(limpo);
 
-    if (!isNaN(num) && (String(valor).includes('R$') || String(valor).includes(','))) {
+    if (!isNaN(num) && String(num) !== String(valor)) {
       await doc.ref.update({ valorSessao: String(num) });
-      corrigidos++;
     }
-  }
-
-  if (corrigidos > 0) {
-    alert(`${corrigidos} valor(es) corrigido(s) com sucesso!`);
   }
 }
 
