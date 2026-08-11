@@ -227,6 +227,33 @@ function tocarSom(nome) {
   }
 }
 
+/* Correções de Valores Monetários */
+async function corrigirValoresMonetariosApp() {
+  const snapshot = await db.collection('pacientes')
+    .where('usuarioId', '==', usuarioLogado.uid)
+    .get();
+
+  let corrigidos = 0;
+
+  for (const doc of snapshot.docs) {
+    const valor = doc.data().valorSessao;
+    if (!valor) continue;
+
+    const limpo = String(valor).replace(/R\$\s?/g, '').trim();
+    const semPontos = limpo.replace(/\./g, '').replace(',', '.');
+    const num = parseFloat(semPontos);
+
+    if (!isNaN(num) && (String(valor).includes('R$') || String(valor).includes(','))) {
+      await doc.ref.update({ valorSessao: String(num) });
+      corrigidos++;
+    }
+  }
+
+  if (corrigidos > 0) {
+    alert(`${corrigidos} valor(es) corrigido(s) com sucesso!`);
+  }
+}
+
 /* Inicialização */
 function inicializar() {
   document.getElementById('tela-loading').classList.add('escondido');
@@ -352,6 +379,7 @@ btnEntrar.addEventListener('click', async () => {
         carregarConfiguracoes();
         await gerarConsultasTodosPacientes();
         await gerarPagamentosMesTodosPacientes();
+        await corrigirValoresMonetariosApp();
         const loading = document.getElementById('tela-loading');
         loading.classList.remove('escondido');
         mostrarTela(app);

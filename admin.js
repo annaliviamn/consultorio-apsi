@@ -125,66 +125,79 @@ async function carregarPacientesAdmin() {
   const pacientes = snapshotPacientes.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   pacientes.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 
-  lista.innerHTML = `
-    <table class="admin-tabela">
-      <thead>
-        <tr>
-          <th>Nome</th>
-          <th>CPF</th>
-          <th>Data de nascimento</th>
-          <th>Telefone</th>
-          <th>Modalidade</th>
-          <th>Frequência</th>
-          <th>Horário</th>
-          <th>Valor sessão</th>
-          <th>Profissional</th>
-          <th>Usuário</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${pacientes.map(p => {
-          const valorExibir = p.valorSessao ? (() => {
-            const limpo = String(p.valorSessao).replace(/R\$\s?/g, '').trim().replace(/\./g, '').replace(',', '.');
-            const num = parseFloat(limpo);
-            return isNaN(num) ? 'NaN' : 'R$ ' + num.toFixed(2).replace('.', ',');
-          })() : '—';
-          
-          return `
-            <tr>
-              <td>${p.nome || '—'}</td>
-              <td>${p.cpf || '—'}</td>
-              <td>${p.dataNascimento ? new Date(p.dataNascimento + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}</td>
-              <td>${p.telefone || '—'}</td>
-              <td>${p.modalidade === 'online' ? 'Online' : p.modalidade === 'hibrida' ? 'Híbrida' : 'Presencial'}</td>
-              <td>${p.frequencia || '—'}</td>
-              <td>${p.horarioFixo || '—'}</td>
-              <td style="color:${valorExibir.includes('NaN') ? 'var(--vermelho)' : 'inherit'}">${valorExibir}</td>
-              <td>${p.profissional || '—'}</td>
-              <td>${mapaUsuarios[p.usuarioId] || '—'}</td>
-              <td style="display:flex;gap:4px;">
-                <button class="btn-excluir-paciente btn-excluir-perfil" data-id="${p.id}" style="font-size:12px;padding:4px 10px;">Excluir</button>
-              </td>
-            </tr>
-          `;
-        }).join('')}
-      </tbody>
-    </table>
-  `;
+  function renderTabela(lista, dados) {
+    lista.innerHTML = dados.length === 0 ? '<p class="vazio">Nenhum resultado encontrado.</p>' : `
+      <table class="admin-tabela">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>CPF</th>
+            <th>Data de nascimento</th>
+            <th>Telefone</th>
+            <th>Modalidade</th>
+            <th>Frequência</th>
+            <th>Horário</th>
+            <th>Valor sessão</th>
+            <th>Profissional</th>
+            <th>Usuário</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${dados.map(p => {
+            const valorExibir = p.valorSessao ? (() => {
+              const limpo = String(p.valorSessao).replace(/R\$\s?/g, '').trim().replace(/\./g, '').replace(',', '.');
+              const num = parseFloat(limpo);
+              return isNaN(num) ? 'NaN' : 'R$ ' + num.toFixed(2).replace('.', ',');
+            })() : '—';
+            return `
+              <tr>
+                <td>${p.nome || '—'}</td>
+                <td>${p.cpf || '—'}</td>
+                <td>${p.dataNascimento ? new Date(p.dataNascimento + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}</td>
+                <td>${p.telefone || '—'}</td>
+                <td>${p.modalidade === 'online' ? 'Online' : p.modalidade === 'hibrida' ? 'Híbrida' : 'Presencial'}</td>
+                <td>${p.frequencia || '—'}</td>
+                <td>${p.horarioFixo || '—'}</td>
+                <td style="color:${valorExibir.includes('NaN') ? 'var(--vermelho)' : 'inherit'}">${valorExibir}</td>
+                <td>${p.profissional || '—'}</td>
+                <td>${mapaUsuarios[p.usuarioId] || '—'}</td>
+                <td style="display:flex;gap:4px;">
+                  <button class="btn-excluir-paciente btn-excluir-perfil" data-id="${p.id}" style="font-size:12px;padding:4px 10px;">Excluir</button>
+                </td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
 
-  document.querySelectorAll('.btn-excluir-paciente').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const confirmar = confirm('Excluir este paciente e todos os seus dados?');
-      if (!confirmar) return;
-      const id = btn.dataset.id;
-      const cols = ['consultas', 'anotacoes', 'pagamentos'];
-      for (const col of cols) {
-        const snap = await db.collection(col).where('pacienteId', '==', id).get();
-        for (const doc of snap.docs) await doc.ref.delete();
-      }
-      await db.collection('pacientes').doc(id).delete();
-      carregarPacientesAdmin();
+    lista.querySelectorAll('.btn-excluir-paciente').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const confirmar = confirm('Excluir este paciente e todos os seus dados?');
+        if (!confirmar) return;
+        const id = btn.dataset.id;
+        const cols = ['consultas', 'anotacoes', 'pagamentos'];
+        for (const col of cols) {
+          const snap = await db.collection(col).where('pacienteId', '==', id).get();
+          for (const doc of snap.docs) await doc.ref.delete();
+        }
+        await db.collection('pacientes').doc(id).delete();
+        carregarPacientesAdmin();
+      });
     });
+  }
+
+  renderTabela(lista, pacientes);
+
+  document.getElementById('busca-admin-pacientes').addEventListener('input', (e) => {
+    const filtro = e.target.value.toLowerCase();
+    const filtrados = pacientes.filter(p =>
+      (p.nome || '').toLowerCase().includes(filtro) ||
+      (p.cpf || '').toLowerCase().includes(filtro) ||
+      (p.profissional || '').toLowerCase().includes(filtro)
+    );
+    renderTabela(lista, filtrados);
   });
 }
 
@@ -205,42 +218,56 @@ async function carregarConsultasAdmin() {
   const consultas = snapshotConsultas.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   consultas.sort((a, b) => b.data.localeCompare(a.data));
 
-  lista.innerHTML = `
-    <table class="admin-tabela">
-      <thead>
-        <tr>
-          <th>Paciente</th>
-          <th>Data</th>
-          <th>Hora</th>
-          <th>Duração</th>
-          <th>Status</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${consultas.map(c => `
+  function renderTabela(lista, dados) {
+    lista.innerHTML = dados.length === 0 ? '<p class="vazio">Nenhum resultado encontrado.</p>' : `
+      <table class="admin-tabela">
+        <thead>
           <tr>
-            <td>${mapaPacientes[c.pacienteId] || '—'}</td>
-            <td>${c.data ? new Date(c.data + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}</td>
-            <td>${c.hora || '—'}</td>
-            <td>${c.duracao ? c.duracao + ' min' : '—'}</td>
-            <td><span class="badge ${c.status}">${c.status ? c.status.charAt(0).toUpperCase() + c.status.slice(1) : '—'}</span></td>
-            <td>
-              <button class="btn-excluir-consulta btn-excluir-perfil" data-id="${c.id}" style="font-size:12px;padding:4px 10px;">Excluir</button>
-            </td>
+            <th>Paciente</th>
+            <th>Data</th>
+            <th>Hora</th>
+            <th>Duração</th>
+            <th>Status</th>
+            <th>Ações</th>
           </tr>
-        `).join('')}
-      </tbody>
-    </table>
-  `;
+        </thead>
+        <tbody>
+          ${dados.map(c => `
+            <tr>
+              <td>${mapaPacientes[c.pacienteId] || '—'}</td>
+              <td>${c.data ? new Date(c.data + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}</td>
+              <td>${c.hora || '—'}</td>
+              <td>${c.duracao ? c.duracao + ' min' : '—'}</td>
+              <td><span class="badge ${c.status}">${c.status ? c.status.charAt(0).toUpperCase() + c.status.slice(1) : '—'}</span></td>
+              <td>
+                <button class="btn-excluir-consulta btn-excluir-perfil" data-id="${c.id}" style="font-size:12px;padding:4px 10px;">Excluir</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
 
-  document.querySelectorAll('.btn-excluir-consulta').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const confirmar = confirm('Excluir esta consulta?');
-      if (!confirmar) return;
-      await db.collection('consultas').doc(btn.dataset.id).delete();
-      carregarConsultasAdmin();
+    lista.querySelectorAll('.btn-excluir-consulta').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const confirmar = confirm('Excluir esta consulta?');
+        if (!confirmar) return;
+        await db.collection('consultas').doc(btn.dataset.id).delete();
+        carregarConsultasAdmin();
+      });
     });
+  }
+
+  renderTabela(lista, consultas);
+
+  document.getElementById('busca-admin-consultas').addEventListener('input', (e) => {
+    const filtro = e.target.value.toLowerCase();
+    const filtrados = consultas.filter(c =>
+      (mapaPacientes[c.pacienteId] || '').toLowerCase().includes(filtro) ||
+      (c.data || '').includes(filtro) ||
+      (c.status || '').toLowerCase().includes(filtro)
+    );
+    renderTabela(lista, filtrados);
   });
 }
 
@@ -270,59 +297,68 @@ async function carregarPagamentosAdmin() {
     return `R$ ${num.toFixed(2).replace('.', ',')}`;
   }
 
-  lista.innerHTML = `
-    <table class="admin-tabela">
-      <thead>
-        <tr>
-          <th>Paciente</th>
-          <th>Mês</th>
-          <th>Valor</th>
-          <th>Status</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${pagamentos.map(p => `
+  function renderTabela(lista, dados) {
+    lista.innerHTML = dados.length === 0 ? '<p class="vazio">Nenhum resultado encontrado.</p>' : `
+      <table class="admin-tabela">
+        <thead>
           <tr>
-            <td>${mapaPacientes[p.pacienteId] || '—'}</td>
-            <td>${nomesMeses[p.mes] || '—'} ${p.ano || ''}</td>
-            <td id="valor-${p.id}">${formatarValorAdmin(p.valor)}</td>
-            <td><span class="badge ${p.status}">${p.status ? p.status.charAt(0).toUpperCase() + p.status.slice(1) : '—'}</span></td>
-            <td style="display:flex;gap:4px;">
-              <button class="btn-editar-valor btn-primario" data-id="${p.id}" data-valor="${p.valor || ''}" style="font-size:12px;padding:4px 10px;">Editar valor</button>
-              <button class="btn-excluir-pagamento btn-excluir-perfil" data-id="${p.id}" style="font-size:12px;padding:4px 10px;">Excluir</button>
-            </td>
+            <th>Paciente</th>
+            <th>Mês</th>
+            <th>Valor</th>
+            <th>Status</th>
+            <th>Ações</th>
           </tr>
-        `).join('')}
-      </tbody>
-    </table>
-  `;
+        </thead>
+        <tbody>
+          ${dados.map(p => `
+            <tr>
+              <td>${mapaPacientes[p.pacienteId] || '—'}</td>
+              <td>${nomesMeses[p.mes] || '—'} ${p.ano || ''}</td>
+              <td>${formatarValorAdmin(p.valor)}</td>
+              <td><span class="badge ${p.status}">${p.status ? p.status.charAt(0).toUpperCase() + p.status.slice(1) : '—'}</span></td>
+              <td style="display:flex;gap:4px;">
+                <button class="btn-editar-valor btn-primario" data-id="${p.id}" data-valor="${p.valor || ''}" style="font-size:12px;padding:4px 10px;">Editar valor</button>
+                <button class="btn-excluir-pagamento btn-excluir-perfil" data-id="${p.id}" style="font-size:12px;padding:4px 10px;">Excluir</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    `;
 
-  document.querySelectorAll('.btn-editar-valor').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = btn.dataset.id;
-      const valorAtual = btn.dataset.valor;
-      const novoValor = prompt('Digite o novo valor (apenas números):', valorAtual);
-      if (!novoValor) return;
-
-      const num = parseFloat(novoValor.replace(',', '.'));
-      if (isNaN(num)) {
-        alert('Valor inválido!');
-        return;
-      }
-
-      await db.collection('pagamentos').doc(id).update({ valor: String(num) });
-      carregarPagamentosAdmin();
+    lista.querySelectorAll('.btn-editar-valor').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        const valorAtual = btn.dataset.valor;
+        const novoValor = prompt('Digite o novo valor (apenas números):', valorAtual);
+        if (!novoValor) return;
+        const num = parseFloat(novoValor.replace(',', '.'));
+        if (isNaN(num)) { alert('Valor inválido!'); return; }
+        await db.collection('pagamentos').doc(id).update({ valor: String(num) });
+        carregarPagamentosAdmin();
+      });
     });
-  });
 
-  document.querySelectorAll('.btn-excluir-pagamento').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const confirmar = confirm('Excluir este pagamento?');
-      if (!confirmar) return;
-      await db.collection('pagamentos').doc(btn.dataset.id).delete();
-      carregarPagamentosAdmin();
+    lista.querySelectorAll('.btn-excluir-pagamento').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const confirmar = confirm('Excluir este pagamento?');
+        if (!confirmar) return;
+        await db.collection('pagamentos').doc(btn.dataset.id).delete();
+        carregarPagamentosAdmin();
+      });
     });
+  }
+
+  renderTabela(lista, pagamentos);
+
+  document.getElementById('busca-admin-pagamentos').addEventListener('input', (e) => {
+    const filtro = e.target.value.toLowerCase();
+    const filtrados = pagamentos.filter(p =>
+      (mapaPacientes[p.pacienteId] || '').toLowerCase().includes(filtro) ||
+      (nomesMeses[p.mes] || '').toLowerCase().includes(filtro) ||
+      (p.status || '').toLowerCase().includes(filtro)
+    );
+    renderTabela(lista, filtrados);
   });
 }
 
