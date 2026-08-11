@@ -262,6 +262,14 @@ async function carregarPagamentosAdmin() {
   const nomesMeses = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
+  function formatarValorAdmin(valor) {
+    if (!valor) return '—';
+    const limpo = String(valor).replace(/R\$\s?/g, '').trim().replace(/\./g, '').replace(',', '.');
+    const num = parseFloat(limpo);
+    if (isNaN(num)) return `<span style="color:var(--vermelho)">⚠ ${valor}</span>`;
+    return `R$ ${num.toFixed(2).replace('.', ',')}`;
+  }
+
   lista.innerHTML = `
     <table class="admin-tabela">
       <thead>
@@ -278,9 +286,10 @@ async function carregarPagamentosAdmin() {
           <tr>
             <td>${mapaPacientes[p.pacienteId] || '—'}</td>
             <td>${nomesMeses[p.mes] || '—'} ${p.ano || ''}</td>
-            <td>${p.valor ? 'R$ ' + p.valor : '—'}</td>
+            <td id="valor-${p.id}">${formatarValorAdmin(p.valor)}</td>
             <td><span class="badge ${p.status}">${p.status ? p.status.charAt(0).toUpperCase() + p.status.slice(1) : '—'}</span></td>
-            <td>
+            <td style="display:flex;gap:4px;">
+              <button class="btn-editar-valor btn-primario" data-id="${p.id}" data-valor="${p.valor || ''}" style="font-size:12px;padding:4px 10px;">Editar valor</button>
               <button class="btn-excluir-pagamento btn-excluir-perfil" data-id="${p.id}" style="font-size:12px;padding:4px 10px;">Excluir</button>
             </td>
           </tr>
@@ -288,6 +297,24 @@ async function carregarPagamentosAdmin() {
       </tbody>
     </table>
   `;
+
+  document.querySelectorAll('.btn-editar-valor').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.dataset.id;
+      const valorAtual = btn.dataset.valor;
+      const novoValor = prompt('Digite o novo valor (apenas números):', valorAtual);
+      if (!novoValor) return;
+
+      const num = parseFloat(novoValor.replace(',', '.'));
+      if (isNaN(num)) {
+        alert('Valor inválido!');
+        return;
+      }
+
+      await db.collection('pagamentos').doc(id).update({ valor: String(num) });
+      carregarPagamentosAdmin();
+    });
+  });
 
   document.querySelectorAll('.btn-excluir-pagamento').forEach(btn => {
     btn.addEventListener('click', async () => {
