@@ -225,6 +225,12 @@
         <input type="email" id="pac-responsavel-email" placeholder="E-mail do responsável" />
 
         <div class="modal-secao">Dados do atendimento</div>
+        <label class="campo-label">Status do paciente</label>
+        <select id="pac-status">
+          <option value="ativo" selected>Ativo</option>
+          <option value="alta">Alta</option>
+          <option value="desistente">Desistente</option>
+        </select>
         <label class="campo-label">Início do atendimento</label>
         <input type="date" id="pac-inicio" />
         <label class="campo-label">Frequência das sessões</label>
@@ -285,6 +291,82 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal Relatório por Período -->
+  <div id="modal-relatorio-periodo" class="escondido">
+    <div class="modal-fundo" id="fundo-relatorio"></div>
+    <div class="modal-caixa">
+      <div class="modal-topo">
+        <h2>Relatório de sessões por período</h2>
+        <button id="btn-fechar-modal-relatorio" class="btn-fechar">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+            <path fill-rule="evenodd" d="M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 01-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z" clip-rule="evenodd"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-corpo">
+        <label class="campo-label">Data inicial</label>
+        <input type="date" id="relatorio-data-inicio" />
+        <label class="campo-label">Data final</label>
+        <input type="date" id="relatorio-data-fim" />
+        <span id="erro-relatorio-periodo"></span>
+        <button id="btn-gerar-relatorio-periodo" class="btn-primario">
+          Gerar relatório
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Atestado -->
+  <div id="modal-atestado" class="escondido">
+    <div class="modal-fundo" id="fundo-atestado"></div>
+    <div class="modal-caixa">
+      <div class="modal-topo">
+        <h2>Emitir atestado</h2>
+        <button id="btn-fechar-modal-atestado" class="btn-fechar">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+            <path fill-rule="evenodd" d="M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 01-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z" clip-rule="evenodd"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-corpo">
+        <label class="campo-label">Tipo de atestado</label>
+        <select id="atestado-tipo">
+          <option value="">Selecione...</option>
+          <option value="comparecimento">Comparecimento</option>
+          <option value="acompanhamento">Acompanhamento</option>
+        </select>
+
+        <!-- Campos comuns aos dois tipos -->
+        <div id="atestado-campos-comuns" class="escondido">
+          <label class="campo-label">Horário</label>
+          <input type="time" id="atestado-horario" />
+        </div>
+
+        <!-- Campo exclusivo do Acompanhamento -->
+        <div id="atestado-campo-acompanhante" class="escondido">
+          <label class="campo-label">Nome do acompanhante</label>
+          <input type="text" id="atestado-acompanhante" placeholder="Nome completo" />
+        </div>
+
+        <!-- Campo exclusivo do Comparecimento -->
+        <div id="atestado-campo-repouso" class="escondido">
+          <label class="campo-checkbox">
+            <input type="checkbox" id="atestado-necessita-repouso" />
+            Necessita de afastamento/repouso
+          </label>
+          <div id="atestado-dias-repouso-wrap" class="escondido">
+            <label class="campo-label">Quantidade de dias</label>
+            <input type="number" id="atestado-dias-repouso" min="1" />
+          </div>
+        </div>
+
+        <span id="erro-atestado"></span>
+        <button id="btn-gerar-atestado" class="btn-primario">
+          Gerar atestado
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Modal Nova Consulta -->
@@ -769,8 +851,19 @@
 
         <!-- Histórico de Sessões -->
         <div class="perfil-secao" style="margin-top: 16px">Histórico de sessões</div>
-        <div class="barra-topo" style="margin-bottom: 12px">
-          <span></span>
+        <div class="barra-topo" style="margin-top: 10px; margin-bottom: 12px">
+          <button class="btn-nav" id="btn-relatorio-periodo">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+              <path fill-rule="evenodd" d="M6.75 2.25A.75.75 0 017.5 3v1.5h9V3A.75.75 0 0118 3v1.5h.75a3 3 0 013 3v11.25a3 3 0 01-3 3H5.25a3 3 0 01-3-3V7.5a3 3 0 013-3H6V3a.75.75 0 01.75-.75zm13.5 9a1.5 1.5 0 00-1.5-1.5H5.25a1.5 1.5 0 00-1.5 1.5v7.5a1.5 1.5 0 001.5 1.5h13.5a1.5 1.5 0 001.5-1.5v-7.5z" clip-rule="evenodd"/>
+            </svg>
+            Relatório por período
+          </button>
+          <button class="btn-nav" id="btn-atestado">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+              <path fill-rule="evenodd" d="M4.5 2A1.5 1.5 0 003 3.5v13A1.5 1.5 0 004.5 18h11a1.5 1.5 0 001.5-1.5V7.621a1.5 1.5 0 00-.44-1.06l-4.12-4.122A1.5 1.5 0 0011.378 2H4.5zm4.75 4.75a.75.75 0 00-1.5 0v2.5h-2.5a.75.75 0 000 1.5h2.5v2.5a.75.75 0 001.5 0v-2.5h2.5a.75.75 0 000-1.5h-2.5v-2.5z" clip-rule="evenodd"/>
+            </svg>
+            Atestado
+          </button>
           <button class="btn-primario" id="btn-nova-anotacao">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
               <path fill-rule="evenodd" d="M7.502 6h7.128A3.375 3.375 0 0118 9.375v9.375a3 3 0 003-3V6.108c0-1.505-1.125-2.811-2.664-2.94a48.972 48.972 0 00-.673-.05A3 3 0 0015 1.5h-1.5a3 3 0 00-2.663 1.618c-.225.015-.45.032-.673.05C8.662 3.295 7.554 4.542 7.502 6zM13.5 3A1.5 1.5 0 0012 4.5h4.5A1.5 1.5 0 0015 3h-1.5z" clip-rule="evenodd"/>

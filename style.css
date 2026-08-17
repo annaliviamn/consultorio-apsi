@@ -1735,7 +1735,9 @@ body {
 
 #modal-consulta,
 #modal-editar-consulta,
-#modal-paciente {
+#modal-paciente,
+#modal-relatorio-periodo,
+#modal-atestado {
   position: fixed;
   top: 0;
   left: 0;
@@ -2110,4 +2112,15 @@ body {
 
 #modal-biblioteca.escondido {
   display: none !important;
+}
+
+/* Status de Pacientes Ativos, Com alta ou Desistentes */
+.paciente-card.status-alta {
+  border-left: 4px solid #22c55e;
+  background: color-mix(in srgb, var(--card) 92%, #22c55e 8%);
+}
+
+.paciente-card.status-desistente {
+  border-left: 4px solid #ef4444;
+  background: color-mix(in srgb, var(--card) 92%, #ef4444 8%);
 }

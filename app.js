@@ -415,8 +415,11 @@ async function carregarPacientes(filtro = '') {
 
     listaPacientes.innerHTML = pacientes.map(p => {
         const iniciais = p.nome.split(' ').map(n => n[0]).slice(0, 2).join('');
+        const statusClasse = p.status === 'alta' ? 'status-alta'
+                            : p.status === 'desistente' ? 'status-desistente'
+                            : '';
         return `
-            <div class="paciente-card" data-id="${p.id}">
+            <div class="paciente-card ${statusClasse}" data-id="${p.id}">
                 <div class="pac-avatar" style="background:var(--acento2);color:var(--acento)">
                 ${iniciais}
                 </div>
@@ -463,6 +466,116 @@ function fecharModal() {
     document.querySelector('.modal-topo h2').textContent = 'Novo paciente';
     erroPaciente.textContent = '';
 }
+
+// Modal de Relatórios por Período
+function abrirModalRelatorio() {
+    document.getElementById('modal-relatorio-periodo').classList.remove('escondido');
+}
+
+function fecharModalRelatorio() {
+    document.getElementById('modal-relatorio-periodo').classList.add('escondido');
+    document.getElementById('relatorio-data-inicio').value = '';
+    document.getElementById('relatorio-data-fim').value = '';
+    document.getElementById('erro-relatorio-periodo').textContent = '';
+}
+
+document.getElementById('btn-relatorio-periodo').addEventListener('click', abrirModalRelatorio);
+document.getElementById('btn-fechar-modal-relatorio').addEventListener('click', fecharModalRelatorio);
+document.getElementById('fundo-relatorio').addEventListener('click', fecharModalRelatorio);
+
+document.getElementById('btn-gerar-relatorio-periodo').addEventListener('click', async () => {
+  const dataInicio = document.getElementById('relatorio-data-inicio').value;
+  const dataFim = document.getElementById('relatorio-data-fim').value;
+  const erro = document.getElementById('erro-relatorio-periodo');
+
+  if (!dataInicio || !dataFim) {
+    erro.textContent = 'Selecione a data inicial e a data final.';
+    return;
+  }
+
+  if (dataInicio > dataFim) {
+    erro.textContent = 'A data inicial não pode ser depois da data final.';
+    return;
+  }
+
+  await exportarSessoesPeriodo(dataInicio, dataFim);
+  fecharModalRelatorio();
+});
+
+// Modal de Atestado
+function abrirModalAtestado() {
+    document.getElementById('modal-atestado').classList.remove('escondido');
+    document.getElementById('atestado-horario').value = pacienteAtual.horarioFixo || '';
+}
+
+function fecharModalAtestado() {
+    document.getElementById('modal-atestado').classList.add('escondido');
+    document.getElementById('atestado-tipo').value = '';
+    document.getElementById('atestado-horario').value = '';
+    document.getElementById('atestado-acompanhante').value = '';
+    document.getElementById('atestado-necessita-repouso').checked = false;
+    document.getElementById('atestado-dias-repouso').value = '';
+    document.getElementById('erro-atestado').textContent = '';
+}
+
+document.getElementById('btn-gerar-atestado').addEventListener('click', async () => {
+  const tipo = document.getElementById('atestado-tipo').value;
+  const horario = document.getElementById('atestado-horario').value;
+  const acompanhante = document.getElementById('atestado-acompanhante').value.trim();
+  const necessitaRepouso = document.getElementById('atestado-necessita-repouso').checked;
+  const diasRepouso = document.getElementById('atestado-dias-repouso').value;
+  const erro = document.getElementById('erro-atestado');
+
+  if (!tipo) {
+    erro.textContent = 'Selecione o tipo de atestado.';
+    return;
+  }
+
+  if (tipo === 'acompanhamento' && !acompanhante) {
+    erro.textContent = 'Informe o nome do acompanhante.';
+    return;
+  }
+
+  erro.textContent = '';
+  await exportarAtestado(tipo, { horario, acompanhante, necessitaRepouso, diasRepouso });
+  fecharModalAtestado();
+});
+
+document.getElementById('btn-atestado').addEventListener('click', abrirModalAtestado);
+document.getElementById('btn-fechar-modal-atestado').addEventListener('click', fecharModalAtestado);
+document.getElementById('fundo-atestado').addEventListener('click', fecharModalAtestado);
+
+// Tipo de Atestado
+document.getElementById('atestado-tipo').addEventListener('change', (e) => {
+  const tipo = e.target.value;
+  const camposComuns = document.getElementById('atestado-campos-comuns');
+  const campoAcompanhante = document.getElementById('atestado-campo-acompanhante');
+  const campoRepouso = document.getElementById('atestado-campo-repouso');
+
+  if (tipo === 'comparecimento') {
+    camposComuns.classList.remove('escondido');
+    campoAcompanhante.classList.add('escondido');
+    campoRepouso.classList.remove('escondido');
+  } else if (tipo === 'acompanhamento') {
+    camposComuns.classList.remove('escondido');
+    campoAcompanhante.classList.remove('escondido');
+    campoRepouso.classList.add('escondido');
+  } else {
+    camposComuns.classList.add('escondido');
+    campoAcompanhante.classList.add('escondido');
+    campoRepouso.classList.add('escondido');
+  }
+});
+
+document.getElementById('atestado-necessita-repouso').addEventListener('change', (e) => {
+  const wrap = document.getElementById('atestado-dias-repouso-wrap');
+  if (e.target.checked) {
+    wrap.classList.remove('escondido');
+  } else {
+    wrap.classList.add('escondido');
+    document.getElementById('atestado-dias-repouso').value = '';
+  }
+});
 
 // Abre o modal ao clicar em novo paciente
 btnNovoPaciente.addEventListener('click', async () => {
@@ -521,6 +634,7 @@ btnSalvarPaciente.addEventListener('click', async () => {
     const duracao = document.getElementById('pac-duracao').value;
     const motivo = document.getElementById('pac-motivo').value.trim();
     const observacoes = document.getElementById('pac-observacoes').value.trim();
+    const status = document.getElementById('pac-status').value;
 
     if (!nome) {
         erroPaciente.textContent = 'O nome do paciente é obrigatório.';
@@ -555,7 +669,7 @@ btnSalvarPaciente.addEventListener('click', async () => {
         responsavelTelefone, responsavelCelular, responsavelEmail,
         dataInicio, frequencia, diaSemana, horarioFixo, duracao, modalidade,
         valorSessao: limparMoeda(valorSessao),
-        formaPagamento, profissional, motivo, observacoes
+        formaPagamento, profissional, motivo, observacoes, status
     };
 
     if (btnSalvarPaciente.dataset.modo === 'editar') {
@@ -624,11 +738,37 @@ document.getElementById('lista-pacientes').addEventListener('click', async (e) =
 
 // Cronômetro de Sessão
 let cronoInterval = null;
-let cronoSegundos = 0;
+let cronoFimTimestamp = null; // horário (ms) em que o cronômetro deve zerar
+let cronoPausado = false;
+let cronoSegundosRestantesAoPausar = 0;
+
+function atualizarDisplayCrono(segundos) {
+  const display = document.getElementById('crono-tempo');
+  const min = String(Math.floor(segundos / 60)).padStart(2, '0');
+  const seg = String(segundos % 60).padStart(2, '0');
+  display.textContent = `${min}:${seg}`;
+}
+
+function tickCrono() {
+  const agora = Date.now();
+  const restanteMs = cronoFimTimestamp - agora;
+  const restanteSegundos = Math.max(0, Math.round(restanteMs / 1000));
+
+  atualizarDisplayCrono(restanteSegundos);
+
+  if (restanteSegundos <= 0) {
+    clearInterval(cronoInterval);
+    document.getElementById('crono-tempo').classList.add('encerrado');
+    document.getElementById('btn-pausar-sessao').style.display = 'none';
+    tocarSom('sessaoEncerrada');
+    alert('Sessão encerrada!');
+  }
+}
 
 function iniciarCrono(duracaoMinutos) {
   clearInterval(cronoInterval);
-  cronoSegundos = duracaoMinutos * 60;
+  cronoFimTimestamp = Date.now() + duracaoMinutos * 60 * 1000;
+  cronoPausado = false;
 
   const display = document.getElementById('crono-tempo');
   const btnIniciar = document.getElementById('btn-iniciar-sessao');
@@ -640,56 +780,31 @@ function iniciarCrono(duracaoMinutos) {
   btnResetar.style.display = 'inline-block';
   display.classList.remove('encerrado');
 
-  cronoInterval = setInterval(() => {
-    cronoSegundos--;
-
-    const min = String(Math.floor(cronoSegundos / 60)).padStart(2, '0');
-    const seg = String(cronoSegundos % 60).padStart(2, '0');
-    display.textContent = `${min}:${seg}`;
-
-    if (cronoSegundos <= 0) {
-      clearInterval(cronoInterval);
-      display.textContent = '00:00';
-      display.classList.add('encerrado');
-      btnPausar.style.display = 'none';
-      tocarSom('sessaoEncerrada');
-      alert('Sessão encerrada!');
-    }
-  }, 1000);
+  cronoInterval = setInterval(tickCrono, 1000);
+  tickCrono(); // já atualiza no primeiro instante, sem esperar 1s
 }
-
-let cronoPausado = false;
 
 function pausarCrono() {
   const btnPausar = document.getElementById('btn-pausar-sessao');
 
   if (!cronoPausado) {
     clearInterval(cronoInterval);
+    cronoSegundosRestantesAoPausar = Math.max(0, Math.round((cronoFimTimestamp - Date.now()) / 1000));
     cronoPausado = true;
     btnPausar.textContent = 'Retomar';
   } else {
+    cronoFimTimestamp = Date.now() + cronoSegundosRestantesAoPausar * 1000;
     cronoPausado = false;
     btnPausar.textContent = 'Pausar';
 
-    cronoInterval = setInterval(() => {
-      cronoSegundos--;
-      const min = String(Math.floor(cronoSegundos / 60)).padStart(2, '0');
-      const seg = String(cronoSegundos % 60).padStart(2, '0');
-      document.getElementById('crono-tempo').textContent = `${min}:${seg}`;
-
-      if (cronoSegundos <= 0) {
-        clearInterval(cronoInterval);
-        document.getElementById('crono-tempo').classList.add('encerrado');
-        document.getElementById('btn-pausar-sessao').style.display = 'none';
-        alert('Sessao encerrada!');
-      }
-    }, 1000);
+    cronoInterval = setInterval(tickCrono, 1000);
+    tickCrono();
   }
 }
 
 function resetarCrono(duracaoMinutos) {
   clearInterval(cronoInterval);
-  cronoSegundos = 0;
+  cronoPausado = false;
   const display = document.getElementById('crono-tempo');
   display.textContent = `${String(duracaoMinutos).padStart(2, '0')}:00`;
   display.classList.remove('encerrado');
@@ -1331,6 +1446,7 @@ document.getElementById('btn-editar-paciente').addEventListener('click', () => {
     document.getElementById('pac-responsavel-celular').value = pacienteAtual.responsavelCelular || '';
     document.getElementById('pac-responsavel-email').value = pacienteAtual.responsavelEmail || '';
     document.getElementById('pac-inicio').value = pacienteAtual.dataInicio || '';
+    document.getElementById('pac-status').value = pacienteAtual.status || 'ativo';
     document.getElementById('pac-frequencia').value = pacienteAtual.frequencia || '';
     document.getElementById('pac-dia-semana').value = pacienteAtual.diaSemana || '';
     document.getElementById('pac-horario-fixo').value = pacienteAtual.horarioFixo || '';
@@ -1750,6 +1866,9 @@ function fecharModalConsulta() {
 document.getElementById('btn-agendar').addEventListener('click', abrirModalConsulta);
 document.getElementById('btn-fechar-modal-consulta').addEventListener('click', fecharModalConsulta);
 document.getElementById('fundo-consulta').addEventListener('click', fecharModalConsulta);
+document.getElementById('btn-relatorio-periodo').addEventListener('click', abrirModalRelatorio);
+document.getElementById('btn-fechar-modal-relatorio').addEventListener('click', fecharModalRelatorio);
+document.getElementById('fundo-relatorio').addEventListener('click', fecharModalRelatorio);
 
 document.getElementById('btn-salvar-consulta').addEventListener('click', async () => {
   const pacienteId = document.getElementById('consulta-paciente').value;
@@ -2826,6 +2945,184 @@ async function exportarSessaoIndividual(anotacao) {
 
   pdf.addImage(imgData, 'PNG', 0, 0, largura, altura);
   pdf.save(`sessao-${pacienteAtual.nome.toLowerCase().replace(/\s+/g, '-')}-${anotacao.data}.pdf`);
+
+  document.body.removeChild(conteudo);
+}
+
+async function exportarSessoesPeriodo(dataInicio, dataFim) {
+  const evolucaoLabel = { positiva: 'Positiva', estavel: 'Estável', negativa: 'Negativa' };
+  const modalidadeLabel = { presencial: 'Presencial', online: 'Online' };
+
+  const agora = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  const docConfig = await db.collection('configuracoes').doc(usuarioLogado.uid).get();
+  const config = docConfig.exists ? docConfig.data() : {};
+
+  const snapshot = await db.collection('anotacoes')
+    .where('pacienteId', '==', pacienteAtual.id)
+    .where('data', '>=', dataInicio)
+    .where('data', '<=', dataFim)
+    .get();
+
+  let sessoes = snapshot.docs.map(doc => doc.data());
+  sessoes.sort((a, b) => a.data.localeCompare(b.data));
+
+  if (sessoes.length === 0) {
+    alert('Nenhuma sessão encontrada nesse período.');
+    return;
+  }
+
+  const inicioFormatado = new Date(dataInicio + 'T12:00:00').toLocaleDateString('pt-BR');
+  const fimFormatado = new Date(dataFim + 'T12:00:00').toLocaleDateString('pt-BR');
+
+  const conteudo = document.createElement('div');
+  conteudo.style.cssText = 'font-family:Arial,sans-serif;max-width:800px;padding:40px;color:#2C2A27;background:#ffffff;';
+  conteudo.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #5B7FA6;">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <img src="assets/logo.jpg" style="height:56px;width:auto;border-radius:8px;" />
+        <div>
+          <h1 style="font-size:16px;color:#5B7FA6;margin:0;font-weight:700;">${config.nomeEmpresa || config.nomeClinica || 'Consultório'}</h1>
+          ${config.cnpj ? `<div style="font-size:11px;color:#6B6760;">CNPJ: ${config.cnpj}</div>` : ''}
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:10px;color:#6B6760;text-transform:uppercase;letter-spacing:1px;">Relatório de Sessões</div>
+        <div style="font-size:11px;color:#6B6760;margin-top:4px;">Emitido em ${agora}</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+      <div style="background:#F7F5F2;border-radius:8px;padding:14px;">
+        <div style="font-size:10px;color:#6B6760;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Paciente</div>
+        <div style="font-size:15px;font-weight:700;">${pacienteAtual.nome}</div>
+        ${pacienteAtual.cpf ? `<div style="font-size:12px;color:#6B6760;margin-top:2px;">CPF: ${pacienteAtual.cpf}</div>` : ''}
+      </div>
+      <div style="background:#F7F5F2;border-radius:8px;padding:14px;">
+        <div style="font-size:10px;color:#6B6760;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Período</div>
+        <div style="font-size:14px;font-weight:600;">${inicioFormatado} a ${fimFormatado}</div>
+        <div style="font-size:12px;color:#5B7FA6;margin-top:2px;">${sessoes.length} sessão(ões)</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:24px;">
+      <div style="font-size:10px;color:#6B6760;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Sessões do período</div>
+      ${sessoes.map(s => {
+        const dataFormatada = new Date(s.data + 'T12:00:00').toLocaleDateString('pt-BR', {
+          weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
+        });
+        return `
+          <div style="margin-bottom:16px;padding:14px;background:#FDFCFB;border:1px solid #EDEAE5;border-radius:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <div style="font-size:13px;font-weight:700;color:#5B7FA6;text-transform:capitalize;">${dataFormatada}${s.hora ? ` às ${s.hora}` : ''}</div>
+              <div style="font-size:11px;color:#6B6760;">${modalidadeLabel[s.modalidade] || s.modalidade || ''}</div>
+            </div>
+            <div style="font-size:13px;line-height:1.7;color:#2C2A27;">${s.texto}</div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+
+    <div style="font-size:10px;color:#9C9890;text-align:center;border-top:1px solid #EDEAE5;padding-top:16px;margin-top:32px;">
+      Documento gerado pelo sistema APSI · ${config.nomeEmpresa || config.nomeClinica || ''} · ${agora}
+    </div>
+  `;
+
+  document.body.appendChild(conteudo);
+
+  const canvas = await html2canvas(conteudo, { scale: 2, useCORS: true });
+  const imgData = canvas.toDataURL('image/png');
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const largura = pdf.internal.pageSize.getWidth();
+  const altura = (canvas.height * largura) / canvas.width;
+
+  let alturaRestante = altura;
+  let posicao = 0;
+
+  pdf.addImage(imgData, 'PNG', 0, posicao, largura, altura);
+  alturaRestante -= pdf.internal.pageSize.getHeight();
+
+  while (alturaRestante > 0) {
+    posicao -= pdf.internal.pageSize.getHeight();
+    pdf.addPage();
+    pdf.addImage(imgData, 'PNG', 0, posicao, largura, altura);
+    alturaRestante -= pdf.internal.pageSize.getHeight();
+  }
+
+  pdf.save(`relatorio-sessoes-${pacienteAtual.nome.toLowerCase().replace(/\s+/g, '-')}-${dataInicio}-a-${dataFim}.pdf`);
+
+  document.body.removeChild(conteudo);
+}
+
+async function exportarAtestado(tipo, dados) {
+  const agora = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+  const hoje = new Date();
+  const dataExtenso = `Ceilândia/DF, ${hoje.getDate()} de ${hoje.toLocaleDateString('pt-BR', { month: 'long' })} de ${hoje.getFullYear()}`;
+
+  const docConfig = await db.collection('configuracoes').doc(usuarioLogado.uid).get();
+  const config = docConfig.exists ? docConfig.data() : {};
+
+  let titulo, textoAtestado;
+
+  if (tipo === 'comparecimento') {
+    titulo = 'Atestado de Comparecimento';
+    textoAtestado = `Atestamos para os fins necessários que, ${pacienteAtual.nome}, compareceu à ${config.nomeEmpresa || config.nomeClinica || 'clínica'}, à sessão psicoterapêutica nesta data, no período das ${dados.horario || '____'}.`;
+    if (dados.necessitaRepouso && dados.diasRepouso) {
+      textoAtestado += ` Necessitando de ${dados.diasRepouso} dia(s) de afastamento/repouso.`;
+    }
+  } else {
+    titulo = 'Atestado de Acompanhamento';
+    textoAtestado = `Atesto para os fins necessários que, ${dados.acompanhante}, compareceu à ${config.nomeEmpresa || config.nomeClinica || 'clínica'}, acompanhando o(a) paciente ${pacienteAtual.nome} à sessão psicoterapêutica nesta data, no período ${dados.horario || '____'}.`;
+  }
+
+  const conteudo = document.createElement('div');
+  conteudo.style.cssText = 'font-family:Arial,sans-serif;max-width:800px;padding:40px;color:#2C2A27;background:#ffffff;';
+  conteudo.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #5B7FA6;">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <img src="assets/logo.jpg" style="height:56px;width:auto;border-radius:8px;" />
+        <div>
+          <h1 style="font-size:16px;color:#5B7FA6;margin:0;font-weight:700;">${config.nomeEmpresa || config.nomeClinica || 'Consultório'}</h1>
+          ${config.cnpj ? `<div style="font-size:11px;color:#6B6760;">CNPJ: ${config.cnpj}</div>` : ''}
+          ${config.enderecoClinica ? `<div style="font-size:11px;color:#6B6760;">${config.enderecoClinica}</div>` : ''}
+          ${config.telefoneClinica ? `<div style="font-size:11px;color:#6B6760;">Tel: ${config.telefoneClinica}</div>` : ''}
+          ${config.crp ? `<div style="font-size:11px;color:#6B6760;">${config.crp}</div>` : ''}
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:10px;color:#6B6760;text-transform:uppercase;letter-spacing:1px;">Emitido em ${agora}</div>
+      </div>
+    </div>
+
+    <h2 style="text-align:center;font-size:18px;margin:40px 0;">${titulo}</h2>
+
+    <p style="font-size:14px;line-height:2;text-align:justify;margin-bottom:60px;">
+      ${textoAtestado}
+    </p>
+
+    <p style="font-size:13px;margin-bottom:60px;">${dataExtenso}.</p>
+
+    <div style="text-align:center;margin-top:40px;">
+      <div style="border-top:1px solid #2C2A27;width:280px;margin:0 auto;padding-top:6px;font-size:12px;">
+        Assinatura / Carimbo
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(conteudo);
+
+  const canvas = await html2canvas(conteudo, { scale: 2, useCORS: true });
+  const imgData = canvas.toDataURL('image/png');
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const largura = pdf.internal.pageSize.getWidth();
+  const altura = (canvas.height * largura) / canvas.width;
+
+  pdf.addImage(imgData, 'PNG', 0, 0, largura, altura);
+  pdf.save(`atestado-${tipo}-${pacienteAtual.nome.toLowerCase().replace(/\s+/g, '-')}-${hoje.toISOString().slice(0,10)}.pdf`);
 
   document.body.removeChild(conteudo);
 }
