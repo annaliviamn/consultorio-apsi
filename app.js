@@ -2873,6 +2873,9 @@ async function exportarSessaoIndividual(anotacao) {
         <div>
           <h1 style="font-size:16px;color:#5B7FA6;margin:0;font-weight:700;">${config.nomeEmpresa || config.nomeClinica || 'Consultório'}</h1>
           ${config.cnpj ? `<div style="font-size:11px;color:#6B6760;">CNPJ: ${config.cnpj}</div>` : ''}
+          ${config.enderecoClinica ? `<div style="font-size:11px;color:#6B6760;">${config.enderecoClinica}</div>` : ''}
+          ${config.telefoneClinica ? `<div style="font-size:11px;color:#6B6760;">Tel: ${config.telefoneClinica}</div>` : ''}
+          ${config.crp ? `<div style="font-size:11px;color:#6B6760;">${config.crp}</div>` : ''}
         </div>
       </div>
       <div style="text-align:right;">
@@ -2916,7 +2919,7 @@ async function exportarSessaoIndividual(anotacao) {
 
     <div style="margin-bottom:24px;">
       <div style="font-size:10px;color:#6B6760;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Anotações da sessão</div>
-      <div style="font-size:13px;line-height:1.8;color:#2C2A27;background:#FDFCFB;border:1px solid #EDEAE5;border-radius:8px;padding:16px;">${anotacao.texto}</div>
+      <div style="font-size:13px;line-height:1.8;color:#2C2A27;background:#FDFCFB;border:1px solid #EDEAE5;border-radius:8px;padding:16px;text-align:justify;">${anotacao.texto}</div>
     </div>
 
     ${anotacao.anexos && anotacao.anexos.length > 0 ? `
@@ -2950,7 +2953,6 @@ async function exportarSessaoIndividual(anotacao) {
 }
 
 async function exportarSessoesPeriodo(dataInicio, dataFim) {
-  const evolucaoLabel = { positiva: 'Positiva', estavel: 'Estável', negativa: 'Negativa' };
   const modalidadeLabel = { presencial: 'Presencial', online: 'Online' };
 
   const agora = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -2975,15 +2977,19 @@ async function exportarSessoesPeriodo(dataInicio, dataFim) {
   const inicioFormatado = new Date(dataInicio + 'T12:00:00').toLocaleDateString('pt-BR');
   const fimFormatado = new Date(dataFim + 'T12:00:00').toLocaleDateString('pt-BR');
 
-  const conteudo = document.createElement('div');
-  conteudo.style.cssText = 'font-family:Arial,sans-serif;max-width:800px;padding:40px;color:#2C2A27;background:#ffffff;';
-  conteudo.innerHTML = `
+  // Monta o cabeçalho como um bloco separado
+  const cabecalho = document.createElement('div');
+  cabecalho.style.cssText = 'font-family:Arial,sans-serif;width:800px;padding:40px 40px 0 40px;color:#2C2A27;background:#ffffff;';
+  cabecalho.innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #5B7FA6;">
       <div style="display:flex;align-items:center;gap:16px;">
         <img src="assets/logo.jpg" style="height:56px;width:auto;border-radius:8px;" />
         <div>
           <h1 style="font-size:16px;color:#5B7FA6;margin:0;font-weight:700;">${config.nomeEmpresa || config.nomeClinica || 'Consultório'}</h1>
           ${config.cnpj ? `<div style="font-size:11px;color:#6B6760;">CNPJ: ${config.cnpj}</div>` : ''}
+          ${config.enderecoClinica ? `<div style="font-size:11px;color:#6B6760;">${config.enderecoClinica}</div>` : ''}
+          ${config.telefoneClinica ? `<div style="font-size:11px;color:#6B6760;">Tel: ${config.telefoneClinica}</div>` : ''}
+          ${config.crp ? `<div style="font-size:11px;color:#6B6760;">${config.crp}</div>` : ''}
         </div>
       </div>
       <div style="text-align:right;">
@@ -3004,56 +3010,85 @@ async function exportarSessoesPeriodo(dataInicio, dataFim) {
         <div style="font-size:12px;color:#5B7FA6;margin-top:2px;">${sessoes.length} sessão(ões)</div>
       </div>
     </div>
+  `;
 
-    <div style="margin-bottom:24px;">
-      <div style="font-size:10px;color:#6B6760;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Sessões do período</div>
-      ${sessoes.map(s => {
-        const dataFormatada = new Date(s.data + 'T12:00:00').toLocaleDateString('pt-BR', {
-          weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
-        });
-        return `
-          <div style="margin-bottom:16px;padding:14px;background:#FDFCFB;border:1px solid #EDEAE5;border-radius:8px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-              <div style="font-size:13px;font-weight:700;color:#5B7FA6;text-transform:capitalize;">${dataFormatada}${s.hora ? ` às ${s.hora}` : ''}</div>
-              <div style="font-size:11px;color:#6B6760;">${modalidadeLabel[s.modalidade] || s.modalidade || ''}</div>
-            </div>
-            <div style="font-size:13px;line-height:1.7;color:#2C2A27;">${s.texto}</div>
-          </div>
-        `;
-      }).join('')}
-    </div>
+  // Monta cada sessão como um bloco separado, pra medir e encaixar individualmente
+  const blocosSessoes = sessoes.map(s => {
+    const dataFormatada = new Date(s.data + 'T12:00:00').toLocaleDateString('pt-BR', {
+      weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
+    });
+    const bloco = document.createElement('div');
+    bloco.style.cssText = 'font-family:Arial,sans-serif;width:800px;padding:0 40px;color:#2C2A27;background:#ffffff;';
+    bloco.innerHTML = `
+      <div style="margin-bottom:16px;padding:14px;background:#FDFCFB;border:1px solid #EDEAE5;border-radius:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="font-size:13px;font-weight:700;color:#5B7FA6;text-transform:capitalize;">${dataFormatada}${s.hora ? ` às ${s.hora}` : ''}</div>
+          <div style="font-size:11px;color:#6B6760;">${modalidadeLabel[s.modalidade] || s.modalidade || ''}</div>
+        </div>
+        <div style="font-size:13px;line-height:1.7;color:#2C2A27;text-align:justify;">${s.texto}</div>
+      </div>
+    `;
+    return bloco;
+  });
 
-    <div style="font-size:10px;color:#9C9890;text-align:center;border-top:1px solid #EDEAE5;padding-top:16px;margin-top:32px;">
+  // Rodapé como bloco separado
+  const rodape = document.createElement('div');
+  rodape.style.cssText = 'font-family:Arial,sans-serif;width:800px;padding:16px 40px 24px 40px;color:#2C2A27;background:#ffffff;';
+  rodape.innerHTML = `
+    <div style="font-size:10px;color:#9C9890;text-align:center;border-top:1px solid #EDEAE5;padding-top:16px;">
       Documento gerado pelo sistema APSI · ${config.nomeEmpresa || config.nomeClinica || ''} · ${agora}
     </div>
   `;
 
-  document.body.appendChild(conteudo);
-
-  const canvas = await html2canvas(conteudo, { scale: 2, useCORS: true });
-  const imgData = canvas.toDataURL('image/png');
+  // Função auxiliar: renderiza um elemento fora da tela e devolve o canvas
+  async function renderizarBloco(elemento) {
+    elemento.style.position = 'fixed';
+    elemento.style.left = '-9999px';
+    elemento.style.top = '0';
+    document.body.appendChild(elemento);
+    const canvas = await html2canvas(elemento, { scale: 2, useCORS: true });
+    document.body.removeChild(elemento);
+    return canvas;
+  }
 
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF('p', 'mm', 'a4');
-  const largura = pdf.internal.pageSize.getWidth();
-  const altura = (canvas.height * largura) / canvas.width;
+  const larguraPagina = pdf.internal.pageSize.getWidth();
+  const alturaPagina = pdf.internal.pageSize.getHeight();
+  const margemInferior = 15;
 
-  let alturaRestante = altura;
-  let posicao = 0;
+  let yAtual = 0;
 
-  pdf.addImage(imgData, 'PNG', 0, posicao, largura, altura);
-  alturaRestante -= pdf.internal.pageSize.getHeight();
+  // Renderiza e posiciona o cabeçalho
+  const canvasCabecalho = await renderizarBloco(cabecalho);
+  const alturaCabecalhoMM = (canvasCabecalho.height * larguraPagina) / canvasCabecalho.width;
+  pdf.addImage(canvasCabecalho.toDataURL('image/png'), 'PNG', 0, yAtual, larguraPagina, alturaCabecalhoMM);
+  yAtual += alturaCabecalhoMM;
 
-  while (alturaRestante > 0) {
-    posicao -= pdf.internal.pageSize.getHeight();
-    pdf.addPage();
-    pdf.addImage(imgData, 'PNG', 0, posicao, largura, altura);
-    alturaRestante -= pdf.internal.pageSize.getHeight();
+  // Renderiza e posiciona cada sessão, pulando de página quando necessário
+  for (const bloco of blocosSessoes) {
+    const canvasSessao = await renderizarBloco(bloco);
+    const alturaSessaoMM = (canvasSessao.height * larguraPagina) / canvasSessao.width;
+
+    if (yAtual + alturaSessaoMM > alturaPagina - margemInferior) {
+      pdf.addPage();
+      yAtual = 10; // pequena margem no topo da nova página
+    }
+
+    pdf.addImage(canvasSessao.toDataURL('image/png'), 'PNG', 0, yAtual, larguraPagina, alturaSessaoMM);
+    yAtual += alturaSessaoMM;
   }
 
-  pdf.save(`relatorio-sessoes-${pacienteAtual.nome.toLowerCase().replace(/\s+/g, '-')}-${dataInicio}-a-${dataFim}.pdf`);
+  // Renderiza e posiciona o rodapé (pula de página se não couber)
+  const canvasRodape = await renderizarBloco(rodape);
+  const alturaRodapeMM = (canvasRodape.height * larguraPagina) / canvasRodape.width;
+  if (yAtual + alturaRodapeMM > alturaPagina - margemInferior) {
+    pdf.addPage();
+    yAtual = 10;
+  }
+  pdf.addImage(canvasRodape.toDataURL('image/png'), 'PNG', 0, yAtual, larguraPagina, alturaRodapeMM);
 
-  document.body.removeChild(conteudo);
+  pdf.save(`relatorio-sessoes-${pacienteAtual.nome.toLowerCase().replace(/\s+/g, '-')}-${dataInicio}-a-${dataFim}.pdf`);
 }
 
 async function exportarAtestado(tipo, dados) {
