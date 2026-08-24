@@ -400,6 +400,17 @@
           <option value="confirmada">Confirmada</option>
           <option value="pendente">Pendente</option>
         </select>
+        <div id="consulta-campo-encaixe" class="escondido">
+          <label class="campo-label">Tipo de encaixe</label>
+          <select id="consulta-tipo-encaixe">
+            <option value="extra">Sessão extra</option>
+            <option value="reagendamento">Reagendamento de consulta</option>
+          </select>
+          <div id="consulta-valor-encaixe-wrap">
+            <label class="campo-label">Valor do encaixe (R$)</label>
+            <input type="text" id="consulta-valor-encaixe" placeholder="Ex: 150,00" />
+          </div>
+        </div>
         <textarea id="consulta-observacoes" placeholder="Observações"></textarea>
         <span id="erro-consulta"></span>
         <button id="btn-salvar-consulta" class="btn-primario">

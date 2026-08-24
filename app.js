@@ -178,6 +178,7 @@ function configurarMascaras() {
   aplicarMascara('pac-responsavel-cpf', mascaraCPF);
   aplicarMascara('pac-valor-sessao', mascaraMoeda);
   aplicarMascara('pagamento-valor', mascaraMoeda);
+  aplicarMascara('consulta-valor-encaixe', mascaraMoeda);
 
   // Configurações
   aplicarMascara('config-cnpj', mascaraCNPJ);
@@ -921,6 +922,15 @@ async function carregarPagamentos(pacienteId) {
 
   const pagamentos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+  // Busca os encaixes (sessões extras) do paciente
+  const snapshotEncaixes = await db.collection('consultas')
+    .where('pacienteId', '==', pacienteId)
+    .where('encaixe', '==', true)
+    .where('tipoEncaixe', '==', 'extra')
+    .get();
+
+  const encaixes = snapshotEncaixes.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
   const agora = new Date();
   const mesAtualNum = agora.getMonth() + 1;
   const anoAtual = agora.getFullYear();
@@ -938,27 +948,42 @@ async function carregarPagamentos(pacienteId) {
     `<option value="${ano}" ${ano === anoAtual ? 'selected' : ''}>${ano}</option>`
   ).join('');
 
-  function renderPagamentos() {
+  // Agrupa os encaixes por ano-mês
+  function encaixesDoMes(ano, mes) {
+    return encaixes.filter(e => {
+      const [anoEncaixe, mesEncaixe] = e.data.split('-').map(Number);
+      return anoEncaixe === ano && mesEncaixe === mes;
+    });
+  }
+
+    function renderPagamentos() {
     const anoFiltrado = Number(selectAno.value);
 
     const pagamentosFiltrados = pagamentos
       .filter(p => p.ano === anoFiltrado)
       .sort((a, b) => a.mes - b.mes);
 
+    const encaixesDoAno = encaixes.filter(e => Number(e.data.split('-')[0]) === anoFiltrado);
+    const encaixesPagosAno = encaixesDoAno.filter(e => (e.statusEncaixe || 'pendente') === 'pago');
+    const totalEncaixesPagosAno = encaixesPagosAno.reduce((acc, e) => acc + Number(e.valorEncaixe || 0), 0);
+    const totalEncaixesPendentesAno = encaixesDoAno
+      .filter(e => (e.statusEncaixe || 'pendente') !== 'pago')
+      .reduce((acc, e) => acc + Number(e.valorEncaixe || 0), 0);
+
     // Resumo anual
     const resumo = document.getElementById('resumo-pagamentos-anual');
     const totalPago = pagamentosFiltrados
       .filter(p => p.status === 'pago')
-      .reduce((acc, p) => acc + Number(p.valor || 0), 0);
+      .reduce((acc, p) => acc + Number(p.valor || 0), 0) + totalEncaixesPagosAno;
     const totalPendente = pagamentosFiltrados
       .filter(p => p.status !== 'pago')
-      .reduce((acc, p) => acc + Number(p.valor || 0), 0);
+      .reduce((acc, p) => acc + Number(p.valor || 0), 0) + totalEncaixesPendentesAno;
 
     resumo.innerHTML = `
       <div class="pagamento-item" style="background:var(--bg);">
         <div class="pagamento-mes">Resumo ${anoFiltrado}</div>
-        <div class="pagamento-valor" style="color:var(--verde)">Pago: R$ ${totalPago}</div>
-        <div class="pagamento-valor" style="color:var(--amarelo)">Pendente: R$ ${totalPendente}</div>
+        <div class="pagamento-valor" style="color:var(--verde)">Pago: R$ ${totalPago.toFixed(2).replace('.', ',')}</div>
+        <div class="pagamento-valor" style="color:var(--amarelo)">Pendente: R$ ${totalPendente.toFixed(2).replace('.', ',')}</div>
       </div>
     `;
 
@@ -975,10 +1000,33 @@ async function carregarPagamentos(pacienteId) {
         status = 'atrasado';
       }
 
+      const encaixesMes = encaixesDoMes(p.ano, p.mes);
+      const totalEncaixesMes = encaixesMes.reduce((acc, e) => acc + Number(e.valorEncaixe || 0), 0);
+
       return `
         <div class="pagamento-item">
-          <div class="pagamento-mes">${meses[p.mes]} ${p.ano}</div>
-          <div class="pagamento-valor">${formatarMoeda(p.valor)}</div>
+          <div class="pagamento-mes">
+            ${meses[p.mes]} ${p.ano}
+            ${encaixesMes.length > 0 ? `
+              <div style="font-size:11px;color:var(--texto2);font-weight:400;margin-top:4px;">
+                ${encaixesMes.map(e => {
+                  const statusEnc = e.statusEncaixe || 'pendente';
+                  return `
+                    <div style="display:flex;align-items:center;gap:6px;margin-top:2px;">
+                      <span>+ Encaixe (${new Date(e.data + 'T12:00:00').toLocaleDateString('pt-BR')}): ${formatarMoeda(e.valorEncaixe)}</span>
+                      <button class="pagamento-status ${statusEnc}" data-encaixe-id="${e.id}" data-status="${statusEnc}" style="font-size:10px;padding:2px 8px;">
+                        ${statusEnc === 'pago' ? 'Pago' : 'Pendente'}
+                      </button>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            ` : ''}
+          </div>
+          <div class="pagamento-valor">
+            ${formatarMoeda(p.valor)}
+            ${totalEncaixesMes > 0 ? `<div style="font-size:12px;color:var(--acento);">Total: R$ ${(Number(p.valor || 0) + totalEncaixesMes).toFixed(2).replace('.', ',')}</div>` : ''}
+          </div>
           <button class="pagamento-status ${status}" data-id="${p.id}" data-status="${p.status}">
             ${status === 'pago' ? 'Pago' : status === 'atrasado' ? 'Atrasado' : 'Pendente'}
           </button>
@@ -987,7 +1035,7 @@ async function carregarPagamentos(pacienteId) {
       `;
     }).join('');
 
-    document.querySelectorAll('.pagamento-status').forEach(btn => {
+    document.querySelectorAll('.pagamento-status[data-id]').forEach(btn => {
       btn.addEventListener('click', async () => {
         const id = btn.dataset.id;
         const statusAtual = btn.dataset.status;
@@ -998,13 +1046,26 @@ async function carregarPagamentos(pacienteId) {
       });
     });
 
+    document.querySelectorAll('.pagamento-status[data-encaixe-id]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.encaixeId;
+        const statusAtual = btn.dataset.status;
+        const novoStatus = statusAtual === 'pago' ? 'pendente' : 'pago';
+        await db.collection('consultas').doc(id).update({ statusEncaixe: novoStatus });
+        carregarPagamentos(pacienteAtual.id);
+      });
+    });
+
     document.querySelectorAll('.btn-recibo').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const id = btn.dataset.id;
         const snap = await db.collection('pagamentos').doc(id).get();
         const pagamento = { id: snap.id, ...snap.data() };
-        gerarRecibo(pagamento);
+        const encaixesMesPagos = encaixesDoMes(pagamento.ano, pagamento.mes)
+          .filter(e => (e.statusEncaixe || 'pendente') === 'pago');
+        gerarRecibo(pagamento, encaixesMesPagos);
       });
     });
   }
@@ -1013,7 +1074,7 @@ async function carregarPagamentos(pacienteId) {
   renderPagamentos();
 }
 
-async function gerarRecibo(pagamento) {
+async function gerarRecibo(pagamento, encaixesMes = []) {
   const docConfig = await db.collection('configuracoes').doc(usuarioLogado.uid).get();
   const config = docConfig.exists ? docConfig.data() : {};
 
@@ -1023,6 +1084,9 @@ async function gerarRecibo(pagamento) {
   const agora = new Date();
   const dataEmissao = agora.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
   const numeroRecibo = `${pagamento.ano}${String(pagamento.mes).padStart(2, '0')}-${pagamento.id.substring(0, 6).toUpperCase()}`;
+
+  const totalEncaixes = encaixesMes.reduce((acc, e) => acc + Number(e.valorEncaixe || 0), 0);
+  const valorTotal = Number(pagamento.valor || 0) + totalEncaixes;
 
   // Verifica se é menor de idade e tem responsável
   let nomeRecibo = pacienteAtual.nome;
@@ -1084,11 +1148,28 @@ async function gerarRecibo(pagamento) {
       </div>
     </div>
 
+    ${encaixesMes.length > 0 ? `
+    <!-- Detalhamento -->
+    <div style="background:#F7F5F2;border-radius:8px;padding:16px;margin-bottom:24px;">
+      <div style="font-size:10px;color:#6B6760;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Detalhamento</div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid #EDEAE5;">
+        <span>Sessões mensais</span>
+        <span style="font-weight:600;">R$ ${Number(pagamento.valor || 0).toFixed(2)}</span>
+      </div>
+      ${encaixesMes.map(e => `
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid #EDEAE5;">
+          <span>Encaixe (${new Date(e.data + 'T12:00:00').toLocaleDateString('pt-BR')})</span>
+          <span style="font-weight:600;">R$ ${Number(e.valorEncaixe || 0).toFixed(2)}</span>
+        </div>
+      `).join('')}
+    </div>
+    ` : ''}
+
     <!-- Valor -->
     <div style="background:linear-gradient(135deg,#5B7FA6,#4a6d94);border-radius:12px;padding:24px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;">
       <div>
         <div style="font-size:11px;color:#ffffff;opacity:0.8;text-transform:uppercase;letter-spacing:1px;">Valor recebido</div>
-        <div style="font-size:36px;font-weight:700;color:#ffffff;margin-top:4px;">R$ ${Number(pagamento.valor || 0).toFixed(2)}</div>
+        <div style="font-size:36px;font-weight:700;color:#ffffff;margin-top:4px;">R$ ${valorTotal.toFixed(2)}</div>
       </div>
       <div style="background:rgba(255,255,255,0.15);border-radius:8px;padding:12px 20px;text-align:center;">
         <div style="font-size:10px;color:#ffffff;opacity:0.8;text-transform:uppercase;letter-spacing:1px;">Status</div>
@@ -1100,9 +1181,9 @@ async function gerarRecibo(pagamento) {
     <div style="border:1px dashed #D8D4CE;border-radius:8px;padding:16px;margin-bottom:40px;background:#FDFCFB;">
       <p style="font-size:12px;color:#6B6760;margin:0;line-height:1.8;">
         Declaro que recebi de <strong style="color:#2C2A27;">${nomeRecibo}</strong>${cpfRecibo ? `, CPF ${cpfRecibo},` : ''} 
-        a importância de <strong style="color:#2C2A27;">R$ ${Number(pagamento.valor || 0).toFixed(2)}</strong> 
-        referente às sessões de psicologia do mês de <strong style="color:#2C2A27;">${meses[pagamento.mes]} de ${pagamento.ano}</strong>
-        ${ehResponsavel ? `, prestadas ao(à) paciente <strong style="color:#2C2A27;">${pacienteAtual.nome}</strong>` : ''}.
+        a importância de <strong style="color:#2C2A27;">R$ ${valorTotal.toFixed(2)}</strong> 
+        referente às sessões de psicologia do mês de <strong style="color:#2C2A27;">${meses[pagamento.mes]} de ${pagamento.ano}</strong>${encaixesMes.length > 0 ? ', incluindo sessão(ões) extra(s) de encaixe realizada(s) no período,' : ''}
+        ${ehResponsavel ? ` prestadas ao(à) paciente <strong style="color:#2C2A27;">${pacienteAtual.nome}</strong>` : ''}.
         Para maior clareza, firmo o presente recibo.
       </p>
     </div>
@@ -1839,7 +1920,7 @@ document.querySelector('.aba[data-tela="agenda"]').addEventListener('click', () 
 // Modal de consulta
 const modalConsulta = document.getElementById('modal-consulta');
 
-async function abrirModalConsulta(pacienteIdSelecionado = null) {
+async function abrirModalConsulta(pacienteIdSelecionado = null, ehEncaixe = false) {
   const snapshot = await db.collection('pacientes')
     .where('usuarioId', '==', usuarioLogado.uid)
     .get();
@@ -1853,6 +1934,23 @@ async function abrirModalConsulta(pacienteIdSelecionado = null) {
   ).join('');
 
   document.getElementById('consulta-data').value = formatarDataISO(diaSelecionado);
+
+  const campoEncaixe = document.getElementById('consulta-campo-encaixe');
+  const valorEncaixeWrap = document.getElementById('consulta-valor-encaixe-wrap');
+  const tipoEncaixe = document.getElementById('consulta-tipo-encaixe');
+  const valorEncaixe = document.getElementById('consulta-valor-encaixe');
+
+  if (ehEncaixe) {
+    campoEncaixe.classList.remove('escondido');
+    tipoEncaixe.value = 'extra';
+    valorEncaixeWrap.classList.remove('escondido');
+    valorEncaixe.value = '';
+  } else {
+    campoEncaixe.classList.add('escondido');
+    tipoEncaixe.value = 'extra';
+    valorEncaixe.value = '';
+  }
+
   modalConsulta.classList.remove('escondido');
 }
 
@@ -1883,15 +1981,36 @@ document.getElementById('btn-salvar-consulta').addEventListener('click', async (
     return;
   }
 
-  await db.collection('consultas').add({
+  const campoEncaixe = document.getElementById('consulta-campo-encaixe');
+  const ehEncaixe = !campoEncaixe.classList.contains('escondido');
+  const tipoEncaixe = ehEncaixe ? document.getElementById('consulta-tipo-encaixe').value : null;
+  const valorEncaixeRaw = document.getElementById('consulta-valor-encaixe').value.trim();
+
+  if (ehEncaixe && tipoEncaixe === 'extra' && !valorEncaixeRaw) {
+    document.getElementById('erro-consulta').textContent = 'Informe o valor do encaixe.';
+    return;
+  }
+
+  const dadosConsulta = {
     pacienteId,
     data,
     hora,
     duracao,
     status,
     observacoes,
-    usuarioId: usuarioLogado.uid
-  });
+    usuarioId: usuarioLogado.uid,
+    encaixe: ehEncaixe
+  };
+
+  if (ehEncaixe) {
+    dadosConsulta.tipoEncaixe = tipoEncaixe;
+    if (tipoEncaixe === 'extra') {
+      dadosConsulta.valorEncaixe = limparMoeda(valorEncaixeRaw);
+      dadosConsulta.statusEncaixe = 'pendente';
+    }
+  }
+
+  await db.collection('consultas').add(dadosConsulta);
 
   fecharModalConsulta();
   carregarAgenda();
@@ -1901,8 +2020,21 @@ document.getElementById('btn-salvar-consulta').addEventListener('click', async (
 document.getElementById('grade-agenda').addEventListener('click', async (e) => {
   if (e.target.classList.contains('btn-encaixe')) {
     const hora = e.target.dataset.hora;
-    await abrirModalConsulta();
+    await abrirModalConsulta(null, true);
     document.getElementById('consulta-hora').value = hora;
+  }
+});
+
+// Tipo de encaixe
+document.getElementById('consulta-tipo-encaixe').addEventListener('change', (e) => {
+  const valorEncaixeWrap = document.getElementById('consulta-valor-encaixe-wrap');
+  const valorEncaixe = document.getElementById('consulta-valor-encaixe');
+
+  if (e.target.value === 'extra') {
+    valorEncaixeWrap.classList.remove('escondido');
+  } else {
+    valorEncaixeWrap.classList.add('escondido');
+    valorEncaixe.value = '';
   }
 });
 
