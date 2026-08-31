@@ -334,6 +334,28 @@ btnCadastrar.addEventListener('click', async () => {
     }
 });
 
+// Login por ID - Admin ou Doutor
+async function carregarAppDoUsuario(uid, dadosUsuario) {
+  usuarioLogado = { uid, ...dadosUsuario };
+
+  atualizarSaudacao();
+  carregarPacientes();
+  carregarConfiguracoes();
+  await gerarConsultasTodosPacientes();
+  await gerarPagamentosMesTodosPacientes();
+  await corrigirValoresMonetariosApp();
+  const loading = document.getElementById('tela-loading');
+  loading.classList.remove('escondido');
+  mostrarTela(app);
+  navegarPara('dashboard');
+  setTimeout(() => {
+      loading.classList.add('escondido');
+  }, 2000);
+  pedirPermissaoNotificacao();
+  verificarNotificacoes();
+  setInterval(verificarNotificacoes, 30 * 60 * 1000);
+}
+
 /* Login */
 const inputSenhaLogin = document.getElementById('input-senha');
 const inputEmailLogin = document.getElementById('input-email-login');
@@ -347,42 +369,24 @@ btnEntrar.addEventListener('click', async () => {
         return;
     }
 
-    const ADMIN_EMAIL = 'annaliviamaciel@gmail.com';
-    const ADMIN_SENHA = 'kanna0110';
-
-    if (email === ADMIN_EMAIL && senha === ADMIN_SENHA) {
-      window.location.href = 'admin.html';
-      return;
-    }
-
     try {
         await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
         const credencial = await auth.signInWithEmailAndPassword(email, senha);
         const uid = credencial.user.uid;
 
         const docUsuario = await db.collection('usuarios').doc(uid).get();
-        usuarioLogado = { uid, ...docUsuario.data() };
+        const dadosUsuario = docUsuario.data();
+
+        if (dadosUsuario && dadosUsuario.admin === true) {
+          window.location.href = 'admin.html';
+          return;
+        }
 
         erroLogin.textContent = '';
         inputSenha.value = '';
         document.getElementById('input-email-login').value = '';
 
-        atualizarSaudacao();
-        carregarPacientes();
-        carregarConfiguracoes();
-        await gerarConsultasTodosPacientes();
-        await gerarPagamentosMesTodosPacientes();
-        await corrigirValoresMonetariosApp();
-        const loading = document.getElementById('tela-loading');
-        loading.classList.remove('escondido');
-        mostrarTela(app);
-        navegarPara('dashboard');
-        setTimeout(() => {
-            loading.classList.add('escondido');
-        }, 2000);
-        pedirPermissaoNotificacao();
-        verificarNotificacoes();
-        setInterval(verificarNotificacoes, 30 * 60 * 1000);
+        await carregarAppDoUsuario(uid, dadosUsuario);
     } catch (erro) {
         erroLogin.textContent = 'E-mail ou senha incorretos.';
     }
@@ -2297,6 +2301,8 @@ function pedirPermissaoNotificacao() {
   }
 }
 
+const notificacoesEnviadas = new Set();
+
 async function verificarNotificacoes() {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   if (!usuarioLogado) return;
@@ -2324,34 +2330,38 @@ async function verificarNotificacoes() {
     c.data === hoje &&
     c.status === 'pendente' &&
     c.hora >= horaAgora &&
-    c.hora <= horaLimite
+    c.hora <= horaLimite &&
+    !notificacoesEnviadas.has(`pendente-${c.id}`)
   );
 
   pendentes.forEach(c => {
     const nome = mapaPacientes[c.pacienteId] || 'Paciente';
     const minutosRestantes = Math.floor((new Date(`${hoje}T${c.hora}`) - agora) / 60000);
-    tocarSom('notificacao')
+    tocarSom('notificacao');
     new Notification('Consulta sem confirmação', {
       body: `${nome} ainda não confirmou a consulta das ${c.hora} (em ${minutosRestantes} min)`,
       icon: 'assets/logo.jpg'
     });
+    notificacoesEnviadas.add(`pendente-${c.id}`);
   });
 
   const confirmadas = consultas.filter(c =>
     c.data === hoje &&
     c.status === 'confirmada' &&
     c.hora >= horaAgora &&
-    c.hora <= horaLimite
+    c.hora <= horaLimite &&
+    !notificacoesEnviadas.has(`confirmada-${c.id}`)
   );
 
   confirmadas.forEach(c => {
     const nome = mapaPacientes[c.pacienteId] || 'Paciente';
     const minutosRestantes = Math.floor((new Date(`${hoje}T${c.hora}`) - agora) / 60000);
-    tocarSom('notificacao')
+    tocarSom('notificacao');
     new Notification('Consulta se aproximando', {
       body: `${nome} tem consulta às ${c.hora} (em ${minutosRestantes} min)`,
       icon: 'assets/logo.jpg'
     });
+    notificacoesEnviadas.add(`confirmada-${c.id}`);
   });
 }
 
@@ -2393,8 +2403,13 @@ async function gerarConsultasMes(paciente) {
       datasFinais = [datas[0]];
     }
 
+    const inicioMesISO = formatarDataISO(inicioMes);
+    const fimMesISO = formatarDataISO(fimMes);
+
     const snapshotExistentes = await db.collection('consultas')
       .where('pacienteId', '==', paciente.id)
+      .where('data', '>=', inicioMesISO)
+      .where('data', '<=', fimMesISO)
       .get();
 
     const datasExistentes = snapshotExistentes.docs.map(doc => {
@@ -2402,19 +2417,19 @@ async function gerarConsultasMes(paciente) {
       return `${d.data}_${d.hora}`;
     });
 
-    for (const data of datasFinais) {
-      if (!datasExistentes.includes(`${data}_${paciente.horarioFixo}`)) {
-        await db.collection('consultas').add({
-          pacienteId: paciente.id,
-          usuarioId: usuarioLogado.uid,
-          data,
-          hora: paciente.horarioFixo,
-          duracao: paciente.duracao || '50',
-          status: 'pendente',
-          observacoes: ''
-        });
-      }
-    }
+    const novasConsultas = datasFinais.filter(data => !datasExistentes.includes(`${data}_${paciente.horarioFixo}`));
+
+    await Promise.all(novasConsultas.map(data =>
+      db.collection('consultas').add({
+        pacienteId: paciente.id,
+        usuarioId: usuarioLogado.uid,
+        data,
+        hora: paciente.horarioFixo,
+        duracao: paciente.duracao || '50',
+        status: 'pendente',
+        observacoes: ''
+      })
+    ));
   }
 }
 
@@ -2426,9 +2441,7 @@ async function gerarConsultasTodosPacientes() {
 
   const pacientes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-  for (const p of pacientes) {
-    await gerarConsultasMes(p);
-  }
+  await Promise.all(pacientes.map(p => gerarConsultasMes(p)));
 }
 
 /* Gerar Pagamentos do Mês para Todos os Pacientes */
@@ -3582,4 +3595,14 @@ document.querySelectorAll('.avatar-opcao').forEach(img => {
     img.classList.add('selecionado');
     atualizarAvatarCabecalho(img.dataset.avatar);
   });
+});
+
+// Chama a versão correta via Firebase
+auth.onAuthStateChanged(async (user) => {
+  if (sessionStorage.getItem('verComoDoutor') === 'true' && user) {
+    sessionStorage.removeItem('verComoDoutor');
+    const docUsuario = await db.collection('usuarios').doc(user.uid).get();
+    const dadosUsuario = docUsuario.data();
+    await carregarAppDoUsuario(user.uid, dadosUsuario);
+  }
 });

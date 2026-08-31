@@ -1,6 +1,3 @@
-/* Admin */
-const ADMIN_EMAIL = 'annaliviamaciel@gmail.com';
-
 /* Navegação */
 function navegarAdmin(nomeTela) {
   document.querySelectorAll('.tela').forEach(t => t.classList.remove('ativa'));
@@ -26,6 +23,12 @@ const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julh
 const agora = new Date();
 document.getElementById('admin-data').textContent = `${dias[agora.getDay()]}, ${agora.getDate()} de ${meses[agora.getMonth()]} de ${agora.getFullYear()}`;
 
+/* Botão "Ver como Doutor" */
+document.getElementById('btn-ver-como-doutor').addEventListener('click', () => {
+  sessionStorage.setItem('verComoDoutor', 'true');
+  window.location.href = 'index.html';
+});
+
 /* Sair */
 document.getElementById('btn-sair').addEventListener('click', () => {
   window.location.href = 'index.html';
@@ -37,14 +40,12 @@ async function carregarVisaoGeral() {
   const snapshotPacientes = await db.collection('pacientes').get();
   const snapshotConsultas = await db.collection('consultas').get();
   const snapshotPagamentos = await db.collection('pagamentos').get();
-  const snapshotAnotacoes = await db.collection('anotacoes').get();
   const snapshotBiblioteca = await db.collection('biblioteca').get();
 
   document.getElementById('stat-admin-usuarios').textContent = snapshotUsuarios.size;
   document.getElementById('stat-admin-pacientes').textContent = snapshotPacientes.size;
   document.getElementById('stat-admin-consultas').textContent = snapshotConsultas.size;
   document.getElementById('stat-admin-pagamentos').textContent = snapshotPagamentos.size;
-  document.getElementById('stat-admin-anotacoes').textContent = snapshotAnotacoes.size;
   document.getElementById('stat-admin-biblioteca').textContent = snapshotBiblioteca.size;
 }
 
