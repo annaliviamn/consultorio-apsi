@@ -419,6 +419,36 @@ async function corrigirValoresMonetarios() {
   carregarVisaoGeral();
 }
 
+// Botão para limpar consultas duplicadas
+async function limparConsultasDuplicadas() {
+  const confirmar = confirm('Isso vai buscar e remover consultas duplicadas (mesmo paciente, data e horário). Deseja continuar?');
+  if (!confirmar) return;
+
+  const snapshot = await db.collection('consultas').get();
+  const consultas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+  const grupos = {};
+  consultas.forEach(c => {
+    const chave = `${c.pacienteId}_${c.data}_${c.hora}`;
+    if (!grupos[chave]) grupos[chave] = [];
+    grupos[chave].push(c);
+  });
+
+  let totalRemovidas = 0;
+  for (const chave in grupos) {
+    const grupo = grupos[chave];
+    if (grupo.length > 1) {
+      const duplicatas = grupo.slice(1);
+      for (const dup of duplicatas) {
+        await db.collection('consultas').doc(dup.id).delete();
+        totalRemovidas++;
+      }
+    }
+  }
+
+  alert(`Concluído! ${totalRemovidas} consulta(s) duplicada(s) removida(s).`);
+}
+
 /* Biblioteca */
 async function carregarBibliotecaAdmin() {
   const snapshot = await db.collection('biblioteca').get();

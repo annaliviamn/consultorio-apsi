@@ -922,6 +922,7 @@ function abrirPerfil(paciente) {
 async function carregarPagamentos(pacienteId) {
   const snapshot = await db.collection('pagamentos')
     .where('pacienteId', '==', pacienteId)
+    .where('usuarioId', '==', usuarioLogado.uid)
     .get();
 
   const pagamentos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -929,6 +930,7 @@ async function carregarPagamentos(pacienteId) {
   // Busca os encaixes (sessões extras) do paciente
   const snapshotEncaixes = await db.collection('consultas')
     .where('pacienteId', '==', pacienteId)
+    .where('usuarioId', '==', usuarioLogado.uid)
     .where('encaixe', '==', true)
     .where('tipoEncaixe', '==', 'extra')
     .get();
@@ -1232,6 +1234,7 @@ document.getElementById('btn-exportar-historico').addEventListener('click', asyn
 
   const snapshotPagamentos = await db.collection('pagamentos')
     .where('pacienteId', '==', pacienteAtual.id)
+    .where('usuarioId', '==', usuarioLogado.uid)
     .get();
 
   const pagamentos = snapshotPagamentos.docs
@@ -1373,6 +1376,7 @@ document.getElementById('btn-salvar-pagamento').addEventListener('click', async 
 
   const snapshotExistente = await db.collection('pagamentos')
     .where('pacienteId', '==', pacienteAtual.id)
+    .where('usuarioId', '==', usuarioLogado.uid)
     .where('mes', '==', mes)
     .where('ano', '==', ano)
     .get();
@@ -1403,7 +1407,6 @@ document.getElementById('btn-voltar-perfil').addEventListener('click', () => {
   document.querySelectorAll('.aba').forEach(a => a.classList.remove('ativa'));
   document.querySelector('.aba[data-tela="prontuarios"]').classList.add('ativa');
   carregarPacientes();
-  carregarAnotacoes(paciente.id);
 });
 
 // Excluir pelo perfil
@@ -1412,7 +1415,10 @@ document.getElementById('btn-excluir-perfil').addEventListener('click', async ()
   if (confirmar) {
     const cols = ['consultas', 'anotacoes', 'pagamentos'];
     for (const col of cols) {
-      const snap = await db.collection(col).where('pacienteId', '==', pacienteAtual.id).get();
+      const snap = await db.collection(col)
+        .where('pacienteId', '==', pacienteAtual.id)
+        .where('usuarioId', '==', usuarioLogado.uid)
+        .get();
       for (const doc of snap.docs) await doc.ref.delete();
     }
     await db.collection('pacientes').doc(pacienteAtual.id).delete();
@@ -1423,6 +1429,7 @@ document.getElementById('btn-excluir-perfil').addEventListener('click', async ()
 document.getElementById('btn-exportar-prontuario').addEventListener('click', async () => {
   const snapshot = await db.collection('anotacoes')
     .where('pacienteId', '==', pacienteAtual.id)
+    .where('usuarioId', '==', usuarioLogado.uid)
     .get();
 
   const anotacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -2408,6 +2415,7 @@ async function gerarConsultasMes(paciente) {
 
     const snapshotExistentes = await db.collection('consultas')
       .where('pacienteId', '==', paciente.id)
+      .where('usuarioId', '==', usuarioLogado.uid)
       .where('data', '>=', inicioMesISO)
       .where('data', '<=', fimMesISO)
       .get();
@@ -2459,6 +2467,7 @@ async function gerarPagamentosMesTodosPacientes() {
   for (const p of pacientes) {
     const snapshotPagamento = await db.collection('pagamentos')
       .where('pacienteId', '==', p.id)
+      .where('usuarioId', '==', usuarioLogado.uid)
       .where('mes', '==', mes)
       .where('ano', '==', ano)
       .get();
@@ -2795,6 +2804,7 @@ async function carregarAnotacoes(pacienteId) {
 
   const snapshot = await db.collection('anotacoes')
     .where('pacienteId', '==', pacienteId)
+    .where('usuarioId', '==', usuarioLogado.uid)
     .get();
 
   const anotacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -2900,11 +2910,13 @@ async function carregarAnotacoes(pacienteId) {
   });
 }
 
+// Gráfico evolução paciente
 let graficoEvolucao = null;
 
 async function carregarGraficoEvolucao(pacienteId) {
   const snapshot = await db.collection('anotacoes')
     .where('pacienteId', '==', pacienteId)
+    .where('usuarioId', '==', usuarioLogado.uid)
     .get();
 
   const anotacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -3105,8 +3117,9 @@ async function exportarSessoesPeriodo(dataInicio, dataFim) {
   const docConfig = await db.collection('configuracoes').doc(usuarioLogado.uid).get();
   const config = docConfig.exists ? docConfig.data() : {};
 
-  const snapshot = await db.collection('anotacoes')
+    const snapshot = await db.collection('anotacoes')
     .where('pacienteId', '==', pacienteAtual.id)
+    .where('usuarioId', '==', usuarioLogado.uid)
     .where('data', '>=', dataInicio)
     .where('data', '<=', dataFim)
     .get();
