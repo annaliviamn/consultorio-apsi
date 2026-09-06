@@ -90,7 +90,7 @@ Sistema de gestão clínica desenvolvido como PWA (Progressive Web App) para o c
 
 1. Clone o repositório:
 ```bash
-git clone https://github.com/seu-usuario/consultorio-apsi.git
+git clone https://github.com/annaliviamn/consultorio-apsi.git
 ```
 
 2. Configure o Firebase criando o arquivo `firebase-config.js` na raiz do projeto:
