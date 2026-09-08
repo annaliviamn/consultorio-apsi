@@ -341,6 +341,7 @@ async function carregarAppDoUsuario(uid, dadosUsuario) {
   atualizarSaudacao();
   carregarPacientes();
   carregarConfiguracoes();
+  await gerarFeriadosDoAno(new Date().getFullYear());
   await gerarConsultasTodosPacientes();
   await gerarPagamentosMesTodosPacientes();
   await corrigirValoresMonetariosApp();
@@ -687,6 +688,7 @@ btnSalvarPaciente.addEventListener('click', async () => {
 
         const docAtualizado = await db.collection('pacientes').doc(pacienteAtual.id).get();
         const pacienteAtualizado = { id: docAtualizado.id, ...docAtualizado.data() };
+        await limparConsultasFuturasAutomaticas(pacienteAtualizado.id);
         await gerarConsultasMes(pacienteAtualizado);
         abrirPerfil(pacienteAtualizado);
         return;
@@ -1753,6 +1755,76 @@ function formatarDataISO(data) {
   return data.toISOString().split('T')[0];
 }
 
+// Feriados automáticos
+function calcularPascoa(ano) {
+  const a = ano % 19;
+  const b = Math.floor(ano / 100);
+  const c = ano % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * 1) / 451);
+  const mes = Math.floor((h + 1 - 7 * m + 114) / 31);
+  const dia = ((h + 1 - 7 * m + 114) % 31) + 1;
+  return new Date(ano, mes - 1, dia);
+}
+
+function somarDias(data, dias) {
+  const nova = new Date(data);
+  nova.setDate(nova.getDate() + dias);
+  return nova;
+}
+
+function calcularFeriados(ano) {
+  const pascoa = calcularPascoa(ano);
+
+  const feriados = [
+    { data: formatarDataISO(new Date(ano, 0, 1)), nome: 'Ano Novo', tipo: 'nacional' },
+    { data: formatarDataISO(somarDias(pascoa, -47)), nome: 'Carnaval', tipo: 'nacional' },
+    { data: formatarDataISO(somarDias(pascoa, -2)), nome: 'Sexta-feira Santa', tipo: 'nacional' },
+    { data: formatarDataISO(new Date(ano, 3, 21)), nome: 'Tiradentes', tipo: 'nacional' },
+    { data: formatarDataISO(new Date(ano, 3, 21)), nome: 'Fundação de Brasília', tipo: 'df' },
+    { data: formatarDataISO(new Date(ano, 4, 1)), nome: 'Dia do Trabalho', tipo: 'nacional' },
+    { data: formatarDataISO(somarDias(pascoa, 60)), nome: 'Corpus Christi', tipo: 'nacional' },
+    { data: formatarDataISO(new Date(ano, 8, 7)), nome: 'Independência do Brasil', tipo: 'nacional' },
+    { data: formatarDataISO(new Date(ano, 9, 12)), nome: 'Nossa Senhora Aparecida', tipo: 'nacional' },
+    { data: formatarDataISO(new Date(ano, 10, 2)), nome: 'Finados', tipo: 'nacional' },
+    { data: formatarDataISO(new Date(ano, 10, 15)), nome: 'Proclamação da República', tipo: 'nacional' },
+    { data: formatarDataISO(new Date(ano, 10, 30)), nome: 'Dia do Evangélico (DF)', tipo: 'df' },
+    { data: formatarDataISO(new Date(ano, 11, 25)), nome: 'Natal', tipo: 'nacional' }
+  ];
+
+  return feriados;
+}
+
+// Salva os feriados no Firestore
+async function gerarFeriadosDoAno(ano) {
+  const snapshotExistente = await db.collection('feriados')
+  .where('usuarioId', '==', usuarioLogado.uid)
+  .where('ano', '==', ano)
+  .get();
+
+  if (!snapshotExistente.empty) return;
+
+  const feriados = calcularFeriados(ano);
+
+  await Promise.all(feriados.map(f =>
+    db.collection('feriados').add({
+      usuarioId: usuarioLogado.uid,
+      data: f.data,
+      nome: f.nome,
+      tipo: f.tipo,
+      ano,
+      atende: false
+    })
+  ));
+}
+
 let mesAtual = new Date();
 let diaSelecionado = new Date();
 
@@ -1849,6 +1921,22 @@ async function carregarAgenda() {
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
   document.getElementById('agenda-dia-titulo').textContent =
     `${dias[diaSelecionado.getDay()]}, ${diaSelecionado.getDate()} de ${meses[diaSelecionado.getMonth()]} de ${diaSelecionado.getFullYear()}`;
+
+  // Verifica se o dia é feriado
+  const snapshotFeriado = await db.collection('feriados')
+    .where('usuarioId', '==', usuarioLogado.uid)
+    .where('data', '==', dataISO)
+    .get();
+
+  const avisoFeriado = document.getElementById('agenda-aviso-feriado');
+  const feriadoDoDia = snapshotFeriado.docs.map(doc => doc.data()).find(f => !f.atende);
+
+  if (feriadoDoDia) {
+    avisoFeriado.innerHTML = `Feriado: <strong>${feriadoDoDia.nome}</strong> sem atendimento previsto neste dia`;
+    avisoFeriado.classList.remove('escondido');
+  } else {
+    avisoFeriado.classList.add('escondido');
+  }
 
   const snapshotConsultas = await db.collection('consultas')
     .where('usuarioId', '==', usuarioLogado.uid)
@@ -2379,13 +2467,25 @@ document.querySelector('.aba[data-tela="alertas"]').addEventListener('click', ()
 
 /* Gerar Consultas do Mês */
 async function gerarConsultasMes(paciente) {
-  if (!paciente.frequencia || !paciente.diaSemana || !paciente.horarioFixo) return;
+  console.log('gerarConsultasMes chamada pra:', paciente.nome, 'freq:', paciente.frequencia, 'dia:', paciente.diaSemana, 'horario:', paciente.horarioFixo);
+  if (!paciente.frequencia || !paciente.diaSemana || !paciente.horarioFixo) {
+    console.log('Saiu cedo: faltou frequencia/diaSemana/horarioFixo');
+    return;
+  }
 
   const agora = new Date();
   const ano = agora.getFullYear();
   const mes = agora.getMonth();
 
   const meses = [mes, mes + 1];
+
+  const snapshotFeriados = await db.collection('feriados')
+    .where('usuarioId', '==', usuarioLogado.uid)
+    .where('atende', '==', false)
+    .get();
+
+  const datasFeriados = new Set(snapshotFeriados.docs.map(doc => doc.data().data));
+  console.log('Feriados sem atendimento:', [...datasFeriados]);
 
   for (const m of meses) {
     const inicioMes = new Date(ano, m, 1);
@@ -2401,6 +2501,8 @@ async function gerarConsultasMes(paciente) {
       cursor.setDate(cursor.getDate() + 1);
     }
 
+    console.log(`Mês ${m}: datas antes do filtro de frequência:`, datas);
+
     let datasFinais = [];
     if (paciente.frequencia === 'semanal') {
       datasFinais = datas;
@@ -2409,6 +2511,12 @@ async function gerarConsultasMes(paciente) {
     } else if (paciente.frequencia === 'mensal') {
       datasFinais = [datas[0]];
     }
+
+    console.log(`Mês ${m}: datas depois do filtro de frequência:`, datasFinais);
+
+    datasFinais = datasFinais.filter(data => !datasFeriados.has(data));
+
+    console.log(`Mês ${m}: datas depois de remover feriados:`, datasFinais);
 
     const inicioMesISO = formatarDataISO(inicioMes);
     const fimMesISO = formatarDataISO(fimMes);
@@ -2427,6 +2535,8 @@ async function gerarConsultasMes(paciente) {
 
     const novasConsultas = datasFinais.filter(data => !datasExistentes.includes(`${data}_${paciente.horarioFixo}`));
 
+    console.log(`Mês ${m}: novas consultas a criar:`, novasConsultas);
+
     await Promise.all(novasConsultas.map(data =>
       db.collection('consultas').add({
         pacienteId: paciente.id,
@@ -2439,6 +2549,23 @@ async function gerarConsultasMes(paciente) {
       })
     ));
   }
+
+  console.log('gerarConsultasMes finalizada pra:', paciente.nome);
+}
+
+// Consultas Futuras Automáticas
+async function limparConsultasFuturasAutomaticas(pacienteId) {
+  const hoje = formatarDataISO(new Date());
+
+  const snapshot = await db.collection('consultas')
+    .where('pacienteId', '==', pacienteId)
+    .where('usuarioId', '==', usuarioLogado.uid)
+    .where('data', '>=', hoje)
+    .get();
+
+  const paraApagar = snapshot.docs.filter(doc => !doc.data().encaixe);
+
+  await Promise.all(paraApagar.map(doc => doc.ref.delete()));
 }
 
 /* Gerar Consultas Todos Pacientes */
