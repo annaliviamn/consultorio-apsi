@@ -2467,11 +2467,7 @@ document.querySelector('.aba[data-tela="alertas"]').addEventListener('click', ()
 
 /* Gerar Consultas do Mês */
 async function gerarConsultasMes(paciente) {
-  console.log('gerarConsultasMes chamada pra:', paciente.nome, 'freq:', paciente.frequencia, 'dia:', paciente.diaSemana, 'horario:', paciente.horarioFixo);
-  if (!paciente.frequencia || !paciente.diaSemana || !paciente.horarioFixo) {
-    console.log('Saiu cedo: faltou frequencia/diaSemana/horarioFixo');
-    return;
-  }
+  if (!paciente.frequencia || !paciente.diaSemana || !paciente.horarioFixo) return;
 
   const agora = new Date();
   const ano = agora.getFullYear();
@@ -2485,7 +2481,15 @@ async function gerarConsultasMes(paciente) {
     .get();
 
   const datasFeriados = new Set(snapshotFeriados.docs.map(doc => doc.data().data));
-  console.log('Feriados sem atendimento:', [...datasFeriados]);
+
+  function pertenceASemanaQuinzenal(dataCandidataISO) {
+    if (!paciente.dataInicio) return true; // sem data de início cadastrada, mantém comportamento antigo
+    const candidata = new Date(dataCandidataISO + 'T12:00:00');
+    const ancora = new Date(paciente.dataInicio + 'T12:00:00');
+    const diffDias = Math.round((candidata - ancora) / (1000 * 60 * 60 * 24));
+    const semanas = diffDias / 7;
+    return ((semanas % 2) + 2) % 2 === 0;
+  }
 
   for (const m of meses) {
     const inicioMes = new Date(ano, m, 1);
@@ -2501,22 +2505,16 @@ async function gerarConsultasMes(paciente) {
       cursor.setDate(cursor.getDate() + 1);
     }
 
-    console.log(`Mês ${m}: datas antes do filtro de frequência:`, datas);
-
     let datasFinais = [];
     if (paciente.frequencia === 'semanal') {
       datasFinais = datas;
     } else if (paciente.frequencia === 'quinzenal') {
-      datasFinais = datas.filter((_, i) => i % 2 === 0);
+      datasFinais = datas.filter(data => pertenceASemanaQuinzenal(data));
     } else if (paciente.frequencia === 'mensal') {
       datasFinais = [datas[0]];
     }
 
-    console.log(`Mês ${m}: datas depois do filtro de frequência:`, datasFinais);
-
     datasFinais = datasFinais.filter(data => !datasFeriados.has(data));
-
-    console.log(`Mês ${m}: datas depois de remover feriados:`, datasFinais);
 
     const inicioMesISO = formatarDataISO(inicioMes);
     const fimMesISO = formatarDataISO(fimMes);
@@ -2535,8 +2533,6 @@ async function gerarConsultasMes(paciente) {
 
     const novasConsultas = datasFinais.filter(data => !datasExistentes.includes(`${data}_${paciente.horarioFixo}`));
 
-    console.log(`Mês ${m}: novas consultas a criar:`, novasConsultas);
-
     await Promise.all(novasConsultas.map(data =>
       db.collection('consultas').add({
         pacienteId: paciente.id,
@@ -2549,8 +2545,6 @@ async function gerarConsultasMes(paciente) {
       })
     ));
   }
-
-  console.log('gerarConsultasMes finalizada pra:', paciente.nome);
 }
 
 // Consultas Futuras Automáticas
