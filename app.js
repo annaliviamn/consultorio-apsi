@@ -311,7 +311,8 @@ btnCadastrar.addEventListener('click', async () => {
         const credencial = await auth.createUserWithEmailAndPassword(email, senha);
         const uid = credencial.user.uid;
 
-        await db.collection('usuarios').doc(uid).set({ nome, email });
+        const dadosUsuario = { nome, email, admin: false };
+        await db.collection('usuarios').doc(uid).set(dadosUsuario);
 
         inputNome.value = '';
         inputEmail.value = '';
@@ -319,12 +320,7 @@ btnCadastrar.addEventListener('click', async () => {
         inputSenhaConfirma.value = '';
         erroCadastro.textContent = '';
 
-        const loading = document.getElementById('tela-loading');
-        loading.classList.remove('escondido');
-        setTimeout(() => {
-            loading.classList.add('escondido');
-            mostrarTela(telaLogin);
-        }, 2000);
+        await carregarAppDoUsuario(uid, dadosUsuario);
     } catch (erro) {
         if (erro.code === 'auth/email-already-in-use') {
             erroCadastro.textContent = 'Este e-mail já está cadastrado.';
